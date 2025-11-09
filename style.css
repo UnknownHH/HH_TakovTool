@@ -49,8 +49,14 @@ body {
         left: 10px;
         transform: none;
         right: 10px;
+		background-color: none;
         max-width: calc(100% - 20px);
     }
+	.map-controls,
+    .task-controls,
+	.bottom-dock
+	{
+    background-color: none;
 }
 .nav-container {
     display: flex;
@@ -639,4 +645,5 @@ body {
 .bottom-dock {
     bottom: 10px;
 }
+
 

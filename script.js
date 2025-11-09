@@ -1,6 +1,10 @@
 // 全局变量
 let currentMap = null;
 let panzoomInstance = null;
+let currentSelectedNode = null; // 跟踪当前选中的节点
+let currentTraderZoomState = {}; // 存储每个商人的缩放状态
+let currentTraderName = null; // 当前商人名称
+let currentTransform = null; // 当前变换状态
 
 // 本地存储键名
 const STORAGE_KEY = 'tarkov-tasks-progress';
@@ -195,11 +199,18 @@ function initTasksInterface() {
     // 商人选择
     document.querySelectorAll('.dock-item[data-trader]').forEach(item => {
         item.addEventListener('click', function() {
+            // 保存当前商人的变换状态
+            if (currentTraderName && currentTransform) {
+                currentTraderZoomState[currentTraderName] = currentTransform;
+            }
+            
             document.querySelectorAll('.dock-item[data-trader]').forEach(trader => trader.classList.remove('active'));
             this.classList.add('active');
             
             const traderName = this.getAttribute('data-trader');
-            renderTaskGraph(traderName);
+            
+            // 渲染任务图，会自动应用保存的缩放状态
+            setTimeout(() => renderTaskGraph(traderName), 200);
         });
     });
     
@@ -222,7 +233,7 @@ function initTasksInterface() {
         renderTaskGraph('prapor');
     }, 100);
     
-    // 窗口调整大小时重绘任务图
+    // 窗口调整大小时重绘任务图，但保持缩放状态
     window.addEventListener('resize', function() {
         const activeTrader = document.querySelector('.dock-item.active[data-trader]');
         const tasksContent = document.getElementById('tasks-content');
@@ -230,7 +241,14 @@ function initTasksInterface() {
         if (activeTrader && tasksContent.classList.contains('active')) {
             setTimeout(() => {
                 const traderName = activeTrader.getAttribute('data-trader');
+                // 保存当前变换状态
+                const savedTransform = currentTransform;
                 renderTaskGraph(traderName);
+                // 恢复变换状态
+                if (savedTransform) {
+                    currentTransform = savedTransform;
+                    currentTraderZoomState[traderName] = savedTransform;
+                }
             }, 300);
         }
     });
@@ -244,6 +262,14 @@ function renderTaskGraph(traderName) {
         setTimeout(() => renderTaskGraph(traderName), 100);
         return;
     }
+    
+    // 保存当前商人的变换状态（如果存在）
+    if (currentTraderName && currentTransform) {
+        currentTraderZoomState[currentTraderName] = currentTransform;
+    }
+    
+    // 更新当前商人名称
+    currentTraderName = traderName;
     
     // 清空现有内容
     d3.select('#task-graph').selectAll('*').remove();
@@ -271,6 +297,23 @@ function renderTaskGraph(traderName) {
         .scaleExtent([0.1, 4])
         .on('zoom', (event) => {
             g.attr('transform', event.transform);
+            currentTransform = event.transform; // 保存当前变换状态
+            
+            // 添加：在缩放或平移时关闭任务详情框
+            const taskTooltip = document.getElementById('task-tooltip');
+            if (taskTooltip && taskTooltip.style.display === 'flex') {
+                taskTooltip.style.display = 'none';
+                
+                // 同时取消选中节点的样式
+                if (currentSelectedNode) {
+                    d3.select(currentSelectedNode)
+                        .classed('selected', false)
+                        .select('rect')
+                        .attr('stroke', currentSelectedNode.__data__.completed ? '#4CAF50' : '#666')
+                        .attr('stroke-width', currentSelectedNode.__data__.completed ? 3 : 2);
+                    currentSelectedNode = null;
+                }
+            }
         });
     
     svg.call(zoom);
@@ -305,40 +348,40 @@ function renderTaskGraph(traderName) {
         console.log(`节点 ${node.name} 的实际位置: (${node.x}, ${node.y})`);
     });
     
-	// 创建连线 - 使用水平和垂直线（网格式）
-	const link = g.append('g')
-		.attr('class', 'links')
-		.selectAll('path')
-		.data(tasks.links)
-		.enter().append('path')
-		.attr('d', d => {
-			const source = tasks.nodes[d.source];
-			const target = tasks.nodes[d.target];
-			
-			// 网格式连线：先水平移动，再垂直移动，再水平移动
-			const midX1 = source.x + (target.x - source.x) * 0.5;
-			const midX2 = target.x - (target.x - source.x) * 0.5;
-			
-			return `M ${source.x} ${source.y} 
-					H ${midX1} 
-					V ${target.y} 
-					H ${target.x}`;
-		})
-		.attr('fill', 'none')
-		.attr('stroke', d => {
-			// 根据连线类型设置不同颜色
-			switch(d.type) {
-				case 'branch':
-					return '#FF9800'; // 橙色用于分支连线
-				case 'default':
-					return '#666';    // 灰色用于默认连线
-				default:
-					return '#4CAF50'; // 绿色用于主连线
-			}
-		})
-		.attr('stroke-width', 10) // 统一设置为4像素粗细
-		.attr('stroke-dasharray', d => d.type === 'branch' ? '5,5' : 'none')
-		.attr('stroke-opacity', 0.8);
+    // 创建连线 - 使用水平和垂直线（网格式）
+    const link = g.append('g')
+        .attr('class', 'links')
+        .selectAll('path')
+        .data(tasks.links)
+        .enter().append('path')
+        .attr('d', d => {
+            const source = tasks.nodes[d.source];
+            const target = tasks.nodes[d.target];
+            
+            // 网格式连线：先水平移动，再垂直移动，再水平移动
+            const midX1 = source.x + (target.x - source.x) * 0.5;
+            const midX2 = target.x - (target.x - source.x) * 0.5;
+            
+            return `M ${source.x} ${source.y} 
+                    H ${midX1} 
+                    V ${target.y} 
+                    H ${target.x}`;
+        })
+        .attr('fill', 'none')
+        .attr('stroke', d => {
+            // 根据连线类型设置不同颜色
+            switch(d.type) {
+                case 'branch':
+                    return '#FF9800'; // 橙色用于分支连线
+                case 'default':
+                    return '#666';    // 灰色用于默认连线
+                default:
+                    return '#4CAF50'; // 绿色用于主连线
+            }
+        })
+        .attr('stroke-width', 10) // 统一设置为4像素粗细
+        .attr('stroke-dasharray', d => d.type === 'branch' ? '5,5' : 'none')
+        .attr('stroke-opacity', 0.8);
     
     // 创建节点组
     const node = g.append('g')
@@ -361,187 +404,311 @@ function renderTaskGraph(traderName) {
         .attr('stroke', d => d.completed ? '#4CAF50' : '#666')
         .attr('stroke-width', d => d.completed ? 3 : 2);
 
-	// 添加地点和等级信息条（在图片上方）
-	node.append('rect')
-		.attr('width', nodeWidth - 20)
-		.attr('height', 20)
-		.attr('x', -nodeWidth/2 + 10)
-		.attr('y', -nodeHeight/2 + 10)
-		.attr('rx', 4)
-		.attr('ry', 4)
-		.attr('fill', 'rgba(0, 0, 0, 0.7)');
+    // 添加地点和等级信息条（在图片上方）
+    node.append('rect')
+        .attr('width', nodeWidth - 20)
+        .attr('height', 20)
+        .attr('x', -nodeWidth/2 + 10)
+        .attr('y', -nodeHeight/2 + 10)
+        .attr('rx', 4)
+        .attr('ry', 4)
+        .attr('fill', 'rgba(0, 0, 0, 0.7)');
 
-	// 添加任务地点（左侧）
-	node.append('text')
-		.text(d => d.location)
-		.attr('text-anchor', 'start')
-		.attr('x', -nodeWidth/2 + 15)
-		.attr('y', -nodeHeight/2 + 23)
-		.attr('fill', '#fff')
-		.style('font-size', '9px')
-		.style('font-weight', 'bold')
-		.style('pointer-events', 'none');
+    // 添加任务地点（左侧）
+    node.append('text')
+        .text(d => d.location)
+        .attr('text-anchor', 'start')
+        .attr('x', -nodeWidth/2 + 15)
+        .attr('y', -nodeHeight/2 + 23)
+        .attr('fill', '#fff')
+        .style('font-size', '9px')
+        .style('font-weight', 'bold')
+        .style('pointer-events', 'none');
 
-	// 添加任务等级（右侧）
-	node.append('text')
-		.text(d => `Lv.${d.level}`)
-		.attr('text-anchor', 'end')
-		.attr('x', nodeWidth/2 - 15)
-		.attr('y', -nodeHeight/2 + 23)
-		.attr('fill', '#4CAF50')
-		.style('font-size', '9px')
-		.style('font-weight', 'bold')
-		.style('pointer-events', 'none');
+    // 添加任务等级（右侧）
+    node.append('text')
+        .text(d => `Lv.${d.level}`)
+        .attr('text-anchor', 'end')
+        .attr('x', nodeWidth/2 - 15)
+        .attr('y', -nodeHeight/2 + 23)
+        .attr('fill', '#4CAF50')
+        .style('font-size', '9px')
+        .style('font-weight', 'bold')
+        .style('pointer-events', 'none');
 
-	// 添加节点图片 - 调整位置，为信息条留出空间
-	node.append('image')
-		.attr('xlink:href', d => d.image)
-		.attr('x', -nodeWidth/2 + 10)
-		.attr('y', -nodeHeight/2 + 35) // 调整Y位置，为信息条留出空间
-		.attr('width', nodeWidth - 20)
-		.attr('height', 80) // 调整高度，为任务目标和名称留出空间
-		.attr('preserveAspectRatio', 'xMidYMid slice');
+    // 添加节点图片 - 调整位置，为信息条留出空间
+    node.append('image')
+        .attr('xlink:href', d => d.image)
+        .attr('x', -nodeWidth/2 + 10)
+        .attr('y', -nodeHeight/2 + 35) // 调整Y位置，为信息条留出空间
+        .attr('width', nodeWidth - 20)
+        .attr('height', 80) // 调整高度，为任务目标和名称留出空间
+        .attr('preserveAspectRatio', 'xMidYMid slice');
 
-	// 添加任务名称
-	node.append('text')
-		.text(d => d.name)
-		.attr('text-anchor', 'middle')
-		.attr('y', -nodeHeight/2 + 130) // 调整位置
-		.attr('fill', '#eee')
-		.style('font-size', '12px')
-		.style('font-weight', 'bold')
-		.style('pointer-events', 'none');
+    // 添加任务名称
+    node.append('text')
+        .text(d => d.name)
+        .attr('text-anchor', 'middle')
+        .attr('y', -nodeHeight/2 + 130) // 调整位置
+        .attr('fill', '#eee')
+        .style('font-size', '12px')
+        .style('font-weight', 'bold')
+        .style('pointer-events', 'none');
 
-	// 添加任务目标（最多显示3个）
-	node.each(function(d) {
-		const nodeElement = d3.select(this);
-		const objectives = Array.isArray(d.objective) ? d.objective : [d.objective];
-		const displayObjectives = objectives.slice(0, 3); // 最多显示3个目标
-		
-		displayObjectives.forEach((objective, i) => {
-			// 截断文本并添加省略号
-			const truncatedText = truncateText(`• ${objective}`, nodeWidth - 30, 8);
-			
-			nodeElement.append('text')
-				.text(truncatedText)
-				.attr('text-anchor', 'start')
-				.attr('x', -nodeWidth/2 + 15)
-				.attr('y', -nodeHeight/2 + 145 + (i * 12)) // 每个目标间隔12px
-				.attr('fill', '#ccc')
-				.style('font-size', '8px')
-				.style('pointer-events', 'none');
-		});
-		
-		// 如果目标超过3个，添加省略号
-		if (objectives.length > 3) {
-			nodeElement.append('text')
-				.text('...')
-				.attr('text-anchor', 'start')
-				.attr('x', -nodeWidth/2 + 15)
-				.attr('y', -nodeHeight/2 + 145 + (3 * 12))
-				.attr('fill', '#999')
-				.style('font-size', '8px')
-				.style('pointer-events', 'none');
-		}
-	});
-
-	// 添加文本截断函数（辅助函数）
-	function truncateText(text, maxWidth, fontSize) {
-		// 最大字符数（包括圆点和省略号）
-		const maxChars = 18;
-		if (text.length > maxChars) {
-			return text.substring(0, maxChars - 1) + '…';
-		}
-		return text;
-	}
-    
-    // 节点点击事件 - 标记为完成并保存状态
-    node.on('click', function(event, d) {
-        d.completed = !d.completed;
+    // 添加任务目标（最多显示3个）
+    node.each(function(d) {
+        const nodeElement = d3.select(this);
+        const objectives = Array.isArray(d.objective) ? d.objective : [d.objective];
+        const displayObjectives = objectives.slice(0, 3); // 最多显示3个目标
         
-        // 保存到本地存储
-        saveTaskProgress(traderName, d.taskId, d.completed);
+        displayObjectives.forEach((objective, i) => {
+            // 截断文本并添加省略号
+            const truncatedText = truncateText(`• ${objective}`, nodeWidth - 30, 8);
+            
+            nodeElement.append('text')
+                .text(truncatedText)
+                .attr('text-anchor', 'start')
+                .attr('x', -nodeWidth/2 + 15)
+                .attr('y', -nodeHeight/2 + 145 + (i * 12)) // 每个目标间隔12px
+                .attr('fill', '#ccc')
+                .style('font-size', '8px')
+                .style('pointer-events', 'none');
+        });
         
-        // 更新节点样式
-        d3.select(this)
-            .classed('completed', d.completed)
-            .select('rect')
-            .attr('fill', d.completed ? '#2a5c2a' : '#2a2a2a')
-            .attr('stroke', d.completed ? '#4CAF50' : '#666')
-            .attr('stroke-width', d.completed ? 3 : 2);
-        
-        d3.select(this).select('circle').attr('fill', d.completed ? '#4CAF50' : '#666');
-        
-        // 更新进度显示
-        updateProgressDisplay(traderName);
-        
-        event.stopPropagation(); // 防止事件冒泡影响缩放
+        // 如果目标超过3个，添加省略号
+        if (objectives.length > 3) {
+            nodeElement.append('text')
+                .text('...')
+                .attr('text-anchor', 'start')
+                .attr('x', -nodeWidth/2 + 15)
+                .attr('y', -nodeHeight/2 + 145 + (3 * 12))
+                .attr('fill', '#999')
+                .style('font-size', '8px')
+                .style('pointer-events', 'none');
+        }
     });
+
+    // 添加文本截断函数（辅助函数）
+    function truncateText(text, maxWidth, fontSize) {
+        // 最大字符数（包括圆点和省略号）
+        const maxChars = 18;
+        if (text.length > maxChars) {
+            return text.substring(0, maxChars - 1) + '…';
+        }
+        return text;
+    }
     
-		// 节点悬停提示 - 显示详细任务信息（固定在左侧）
-		const taskTooltip = document.getElementById('task-tooltip');
-		node.on('mouseover', function(event, d) {
-			taskTooltip.innerHTML = `
-				<div class="task-tooltip-header">
-					<div class="task-tooltip-title">${d.name}</div>
-					<button class="task-tooltip-close">&times;</button>
-				</div>
-				<img src="${d.detailImage}" class="task-image" alt="${d.name}">
-				<div class="task-tooltip-info">
-					<div class="task-info-row">
-						<div><strong>地点:</strong> ${d.location}</div>
-						<div><strong>要求等级:</strong> ${d.level}</div>
-					</div>
-					<div class="task-objectives">
-						<div class="task-section-title"><strong>任务目标:</strong></div>
-						${Array.isArray(d.objective) ? 
-							d.objective.map(obj => `<div class="task-objective">• ${obj}</div>`).join('') : 
-							`<div class="task-objective">• ${d.objective}</div>`
-						}
-					</div>
-					<div class="task-rewards">
-						<div class="task-section-title"><strong>任务奖励:</strong></div>
-						${Array.isArray(d.rewards) ? 
-							d.rewards.map(reward => `<div class="task-reward">• ${reward}</div>`).join('') : 
-							`<div class="task-reward">• ${d.rewards}</div>`
-						}
-					</div>
-				</div>
-			`;
-			taskTooltip.style.display = 'block';
-			// 添加关闭按钮事件
-			const closeBtn = taskTooltip.querySelector('.task-tooltip-close');
-			if (closeBtn) {
-				closeBtn.addEventListener('click', function(e) {
-					e.stopPropagation();
-					taskTooltip.style.display = 'none';
-				});
-			}
-		});
+    // 节点点击事件 - 显示任务详情提示框并选中节点
+    node.on('click', function(event, d) {
+        event.stopPropagation(); // 防止事件冒泡影响缩放
+        
+        // 移除之前选中节点的样式
+        if (currentSelectedNode) {
+            d3.select(currentSelectedNode)
+                .classed('selected', false)
+                .select('rect')
+                .attr('stroke', currentSelectedNode.__data__.completed ? '#4CAF50' : '#666')
+                .attr('stroke-width', currentSelectedNode.__data__.completed ? 3 : 2);
+        }
+        
+        // 设置当前节点为选中状态
+        currentSelectedNode = this;
+        d3.select(this)
+            .classed('selected', true)
+            .select('rect')
+            .attr('stroke', '#2196F3') // 蓝色边框表示选中
+            .attr('stroke-width', 4);
+        
+        // 显示任务详情提示框
+        showTaskTooltip(d, traderName);
+    });
     
     // 更新进度显示
     updateProgressDisplay(traderName);
     
-    // 初始视图调整 - 居中显示所有节点
-    const nodesBoundingBox = {
-        x: Math.min(...tasks.nodes.map(n => n.x - nodeWidth/2)),
-        y: Math.min(...tasks.nodes.map(n => n.y - nodeHeight/2)),
-        width: Math.max(...tasks.nodes.map(n => n.x + nodeWidth/2)) - Math.min(...tasks.nodes.map(n => n.x - nodeWidth/2)),
-        height: Math.max(...tasks.nodes.map(n => n.y + nodeHeight/2)) - Math.min(...tasks.nodes.map(n => n.y - nodeHeight/2))
-    };
+    // 检查是否有保存的缩放状态
+    const savedTransform = currentTraderZoomState[traderName];
     
-    // 计算缩放和平移以使所有节点可见，调整边距参数
-    const scaleX = width / (nodesBoundingBox.width + 100);
-    const scaleY = height / (nodesBoundingBox.height + 100);
-    const scale = Math.min(0.85, scaleX, scaleY);
+    if (savedTransform) {
+        // 应用保存的变换状态
+        g.attr('transform', savedTransform);
+        svg.call(zoom.transform, savedTransform);
+        currentTransform = savedTransform;
+        console.log(`应用保存的缩放状态给商人: ${traderName}`);
+    } else {
+        // 初始视图调整 - 居中显示所有节点
+        const nodesBoundingBox = {
+            x: Math.min(...tasks.nodes.map(n => n.x - nodeWidth/2)),
+            y: Math.min(...tasks.nodes.map(n => n.y - nodeHeight/2)),
+            width: Math.max(...tasks.nodes.map(n => n.x + nodeWidth/2)) - Math.min(...tasks.nodes.map(n => n.x - nodeWidth/2)),
+            height: Math.max(...tasks.nodes.map(n => n.y + nodeHeight/2)) - Math.min(...tasks.nodes.map(n => n.y - nodeHeight/2))
+        };
+        
+        // 计算缩放和平移以使所有节点可见，调整边距参数
+        const scaleX = width / (nodesBoundingBox.width + 100);
+        const scaleY = height / (nodesBoundingBox.height + 100);
+        const scale = Math.min(0.85, scaleX, scaleY);
+        
+        const translate = [
+            width/2 - (nodesBoundingBox.x + nodesBoundingBox.width/2) * scale,
+            height/2 - (nodesBoundingBox.y + nodesBoundingBox.height/2) * scale
+        ];
+        
+        // 创建初始变换
+        const initialTransform = d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale);
+        
+        // 应用初始变换
+        g.attr('transform', initialTransform);
+        svg.call(zoom.transform, initialTransform);
+        currentTransform = initialTransform;
+        
+        // 保存初始状态
+        currentTraderZoomState[traderName] = initialTransform;
+        
+        console.log(`创建初始缩放状态给商人: ${traderName}`);
+    }
+}
+
+// 显示任务详情提示框
+function showTaskTooltip(d, traderName) {
+    const taskTooltip = document.getElementById('task-tooltip');
     
-    const translate = [
-        width/2 - (nodesBoundingBox.x + nodesBoundingBox.width/2) * scale,
-        height/2 - (nodesBoundingBox.y + nodesBoundingBox.height/2) * scale
-    ];
+    // 修复：从本地存储重新获取任务状态，确保显示最新状态
+    const savedProgress = getTraderProgress(traderName);
+    const currentStatus = savedProgress[d.taskId] || false;
+    d.completed = currentStatus;
     
-    // 应用初始变换
-    g.attr('transform', `translate(${translate[0]},${translate[1]}) scale(${scale})`);
+    const statusText = d.completed ? '未完成' : '已完成';
+    const statusButtonClass = d.completed ? 'incomplete' : 'completed';
+    const statusButtonText = d.completed ? '已完成' : '未完成';
+    
+    // 富文本内容示例 - 这里可以根据任务ID或其他条件显示不同的内容
+    const htmlContent = generateTaskHTMLContent(d);
+    
+    taskTooltip.innerHTML = `
+        <div class="task-tooltip-header">
+            <div class="task-tooltip-title">${d.name}</div>
+            <button class="task-tooltip-close">&times;</button>
+        </div>
+        <div class="task-tooltip-info">
+            <img src="${d.detailImage}" class="task-image" alt="${d.name}">
+            <div class="task-info-row">
+                <div><strong>地点:</strong> ${d.location}</div>
+                <div><strong>要求等级:</strong> ${d.level}</div>
+            </div>
+            <div class="task-objectives">
+                <div class="task-section-title">任务目标</div>
+                ${Array.isArray(d.objective) ? 
+                    d.objective.map(obj => `<div class="task-objective">• ${obj}</div>`).join('') : 
+                    `<div class="task-objective">• ${d.objective}</div>`
+                }
+            </div>
+            <div class="task-rewards">
+                <div class="task-section-title">任务奖励</div>
+                ${Array.isArray(d.rewards) ? 
+                    d.rewards.map(reward => `<div class="task-reward">• ${reward}</div>`).join('') : 
+                    `<div class="task-reward">• ${d.rewards}</div>`
+                }
+            </div>
+            <div class="task-Guide">
+                <div class="task-section-title">任务攻略</div>
+                ${htmlContent}
+            </div>
+        </div>
+        <div class="task-actions">
+            <button class="status-toggle-btn ${statusButtonClass}" data-task-id="${d.taskId}" data-trader="${traderName}">
+                ${statusButtonText}
+            </button>
+        </div>
+    `;
+    
+    taskTooltip.style.display = 'flex';
+    
+    // 添加关闭按钮事件
+    const closeBtn = taskTooltip.querySelector('.task-tooltip-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            taskTooltip.style.display = 'none';
+        });
+    }
+    
+    // 添加状态切换按钮事件
+    const statusToggleBtn = taskTooltip.querySelector('.status-toggle-btn');
+    if (statusToggleBtn) {
+        statusToggleBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const taskId = this.getAttribute('data-task-id');
+            const trader = this.getAttribute('data-trader');
+            
+            // 切换任务完成状态
+            toggleTaskStatus(taskId, trader, d);
+            
+            // 更新提示框中的状态显示
+            const newCompletedStatus = !d.completed;
+            
+            if (newCompletedStatus) {
+                this.textContent = '未完成';
+                this.className = 'status-toggle-btn completed';
+            } else {
+                this.textContent = '已完成';
+                this.className = 'status-toggle-btn incomplete';
+            }
+        });
+    }
+}
+
+// 生成任务富文本内容
+function generateTaskHTMLContent(taskData) {
+    // 这里可以根据任务ID、名称或其他属性生成不同的富文本内容
+    // 示例：为特定任务生成攻略内容
+    const taskId = taskData.taskId;
+    
+    // 示例内容 - 实际使用时可以根据具体任务定制
+    let html = `
+        <ul>
+            <li><strong>推荐装备：</strong>根据任务地点选择合适的武器和护甲</li>
+            <li><strong>注意事项：</strong>注意周围敌人位置，合理规划路线</li>
+            <li><strong>完成技巧：</strong>利用掩体，注意听声辨位</li>
+    `;
+    
+    // 为特定任务添加特殊提示
+    if (taskId.includes('prapor-1')) {
+        html += `<li><strong>特殊提示：</strong>Utyos机枪位于中心区西侧建筑内</li>`;
+    } else if (taskId.includes('prapor-2')) {
+        html += `<li><strong>特殊提示：</strong>MP-133霰弹枪可以在Scav身上找到</li>`;
+    } else if (taskId.includes('prapor-4')) {
+        html += `<li><strong>特殊提示：</strong>青铜怀表位于海关建筑内的桌子上</li>`;
+    }
+    
+    html += `</ul>`;
+    
+    return html;
+}
+
+// 切换任务状态
+function toggleTaskStatus(taskId, traderName, taskData) {
+    const newCompletedStatus = !taskData.completed;
+    
+    // 更新任务数据
+    taskData.completed = newCompletedStatus;
+    
+    // 保存到本地存储
+    saveTaskProgress(traderName, taskId, newCompletedStatus);
+    
+    // 更新节点样式
+    if (currentSelectedNode) {
+        const node = d3.select(currentSelectedNode);
+        node.classed('completed', newCompletedStatus);
+        
+        node.select('rect')
+            .attr('fill', newCompletedStatus ? '#2a5c2a' : '#2a2a2a')
+            .attr('stroke', newCompletedStatus ? '#4CAF50' : '#2196F3') // 保持选中状态的蓝色边框
+            .attr('stroke-width', 4); // 保持选中状态的边框宽度
+    }
+    
+    // 更新进度显示
+    updateProgressDisplay(traderName);
 }
 
 // 生成任务数据 - 从表格数据导入，支持多分支连接
@@ -665,7 +832,7 @@ function updateProgressDisplay(traderName) {
     // 更新进度文本 - 现在在浮动控制栏中
     const progressText = document.getElementById('progress-text');
     if (progressText) {
-        progressText.textContent = `任务进度: ${completedTasks}/${totalTasks}`;
+        progressText.textContent = `进度: ${completedTasks}/${totalTasks}`;
     }
     
     console.log(`进度更新: ${traderName} - ${completedTasks}/${totalTasks}`);

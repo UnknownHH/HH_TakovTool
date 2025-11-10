@@ -419,7 +419,7 @@ body {
     padding: 15px;
     flex: 1;
     overflow-y: auto;
-    max-height: calc(80vh - 150px);
+    /*max-height: calc(80vh - 150px);*/
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
@@ -658,4 +658,5 @@ body {
 .leaflet-control-attribution {
     display: none !important;
 }
+
 

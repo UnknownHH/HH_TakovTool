@@ -49,14 +49,8 @@ body {
         left: 10px;
         transform: none;
         right: 10px;
-		background: none;
         max-width: calc(100% - 20px);
     }
-	.map-controls,
-    .task-controls,
-	.bottom-dock
-	{
-    background: none;
 }
 .nav-container {
     display: flex;
@@ -305,7 +299,7 @@ body {
     padding: 15px;
     flex: 1;
     overflow-y: auto;
-    /*max-height: calc(80vh - 150px);*/
+    max-height: calc(80vh - 150px);
 }
 
 /* 隐藏内容区域的滚动条 */
@@ -415,8 +409,7 @@ body {
         left: 10px;
         right: 10px;
         max-width: none;
-        top: 10px;
-		bottom: 10px;
+        top: 120px;
         transform: none;
 		width:auto;
     }
@@ -645,7 +638,3 @@ body {
 .bottom-dock {
     bottom: 10px;
 }
-
-
-
-

@@ -42,6 +42,7 @@
 
     <!-- 地图界面 -->
     <div class="content active" id="map-content">
+        <!-- 地图内容保持不变 -->
         <div class="main-view">
 			<!-- 添加浮动控制栏 -->
 			<div class="floating-controls">
@@ -124,6 +125,7 @@
 
     <!-- 任务界面 -->
     <div class="content" id="tasks-content">
+        <!-- 任务内容保持不变 -->
         <div class="main-view">
 			 <!-- 添加浮动控制栏 -->
 			<div class="floating-controls">
@@ -217,7 +219,17 @@
     <div class="content" id="items-content">
         <div class="main-view">
             <div class="items-container">
-                <div class="coming-soon">物品功能开发中...</div>
+                <!-- 藏身处升级列表 -->
+                <div class="hideout-container">
+                    <h2 class="hideout-title">藏身处升级</h2>
+                    <div class="hideout-controls">
+                        <button id="refresh-hideout" class="hideout-btn">刷新数据</button>
+                        <button id="toggle-all" class="hideout-btn">展开/折叠全部</button>
+                    </div>
+                    <div id="hideout-list" class="hideout-list">
+                        <div class="loading">正在加载藏身处数据...</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -231,7 +243,7 @@
     <!-- Panzoom -->
     <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
     <!-- 任务数据 -->
-    <script src="tasks_data.js"></script>
+    <script src="position_data.js"></script>
     <!-- 自定义JS -->
     <script src="script.js"></script>
 </body>

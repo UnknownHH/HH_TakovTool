@@ -5,6 +5,8 @@ let currentSelectedNode = null; // 跟踪当前选中的节点
 let currentTraderZoomState = {}; // 存储每个商人的缩放状态
 let currentTraderName = null; // 当前商人名称
 let currentTransform = null; // 当前变换状态
+let hideoutData = null; // 存储藏身处数据
+let allTasksData = null; // 存储所有任务数据
 
 // 本地存储键名
 const STORAGE_KEY = 'tarkov-tasks-progress';
@@ -20,11 +22,27 @@ const TRADER_DESCRIPTIONS = {
     "jaeger": "一位隐居的猎人，提供狩猎装备和生存用品。他的任务通常涉及狩猎和生存技能。"
 };
 
+// 商人名称映射
+const TRADER_NAME_MAP = {
+    "prapor": "Prapor",
+    "therapist": "Therapist", 
+    "skier": "Skier",
+    "peacekeeper": "Peacekeeper",
+    "mechanic": "Mechanic",
+    "ragman": "Ragman",
+    "jaeger": "Jaeger",
+    "fence": "Fence",
+    "lightkeeper": "Lightkeeper",
+    "ref": "Ref",
+    "btr": "BTR"
+};
+
 // DOM加载完成后初始化
 document.addEventListener('DOMContentLoaded', function() {
     initNavigation();
     initMapInterface();
     initTasksInterface();
+    initHideoutInterface();
     
     // 默认加载海关地图
     setTimeout(() => {
@@ -64,7 +82,196 @@ function initNavigation() {
                     currentMap.invalidateSize();
                 }, 50);
             }
+            
+            // 如果是物品界面，确保加载藏身处数据
+            if (targetId === 'items-content' && !hideoutData) {
+                loadHideoutData();
+            }
         });
+    });
+}
+
+// 初始化藏身处界面
+function initHideoutInterface() {
+    // 刷新按钮事件
+    document.getElementById('refresh-hideout').addEventListener('click', function() {
+        loadHideoutData();
+    });
+    
+    // 展开/折叠全部按钮事件
+    document.getElementById('toggle-all').addEventListener('click', function() {
+        toggleAllStations();
+    });
+    
+    // 默认加载藏身处数据
+    loadHideoutData();
+}
+
+// 加载藏身处数据
+function loadHideoutData() {
+    const hideoutList = document.getElementById('hideout-list');
+    hideoutList.innerHTML = '<div class="loading">正在加载藏身处数据...</div>';
+    
+    const query = `
+    {
+      hideoutStations(gameMode: pve, lang: zh) {
+        name
+        levels {
+          level
+          description
+          constructionTime
+          itemRequirements {
+            quantity
+            item {
+              name
+              imageLink
+            }
+          }
+        }
+      }
+    }`;
+    
+    fetch('https://api.tarkov.dev/graphql', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        },
+        body: JSON.stringify({query: query})
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('网络响应不正常');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.errors) {
+            throw new Error(data.errors[0].message);
+        }
+        hideoutData = data.data.hideoutStations;
+        renderHideoutList(hideoutData);
+    })
+    .catch(error => {
+        console.error('获取藏身处数据失败:', error);
+        hideoutList.innerHTML = `<div class="error">加载失败: ${error.message}</div>`;
+    });
+}
+
+// 渲染藏身处列表
+function renderHideoutList(stations) {
+    const hideoutList = document.getElementById('hideout-list');
+    
+    if (!stations || stations.length === 0) {
+        hideoutList.innerHTML = '<div class="error">没有找到藏身处数据</div>';
+        return;
+    }
+    
+    let html = '';
+    
+    stations.forEach(station => {
+        if (!station.levels || station.levels.length === 0) return;
+        
+        html += `
+        <div class="hideout-station">
+            <div class="station-header">
+                <h3 class="station-name">${station.name}</h3>
+                <span class="station-toggle">▼</span>
+            </div>
+            <div class="station-levels">
+        `;
+        
+        // 按等级排序
+        station.levels.sort((a, b) => a.level - b.level);
+        
+        station.levels.forEach(level => {
+            const time = formatConstructionTime(level.constructionTime);
+            
+            html += `
+            <div class="station-level">
+                <div class="level-header">
+                    <h4 class="level-title">等级 ${level.level}</h4>
+                    <span class="construction-time">建造时间: ${time}</span>
+                </div>
+                <p class="level-description">${level.description || '暂无描述'}</p>
+                <div class="item-requirements">
+            `;
+            
+            if (level.itemRequirements && level.itemRequirements.length > 0) {
+                level.itemRequirements.forEach(req => {
+                    html += `
+                    <div class="item-requirement">
+                        <img src="${req.item.imageLink}" alt="${req.item.name}" class="item-image" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjIwIiB5PSIyMCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+Tk8gSU1BR0U8L3RleHQ+Cjwvc3ZnPgo='">
+                        <div class="item-info">
+                            <span class="item-name">${req.item.name}</span>
+                            <span class="item-quantity">x ${req.quantity}</span>
+                        </div>
+                    </div>
+                    `;
+                });
+            } else {
+                html += '<div class="item-requirement">无物品需求</div>';
+            }
+            
+            html += `
+                </div>
+            </div>
+            `;
+        });
+        
+        html += `
+            </div>
+        </div>
+        `;
+    });
+    
+    hideoutList.innerHTML = html;
+    
+    // 添加点击事件
+    document.querySelectorAll('.station-header').forEach(header => {
+        header.addEventListener('click', function() {
+            const levels = this.nextElementSibling;
+            const toggle = this.querySelector('.station-toggle');
+            
+            levels.classList.toggle('expanded');
+            toggle.classList.toggle('expanded');
+        });
+    });
+}
+
+// 格式化建造时间
+function formatConstructionTime(seconds) {
+    if (seconds === 0) return '立即完成';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (hours > 0 && minutes > 0) {
+        return `${hours}小时${minutes}分钟`;
+    } else if (hours > 0) {
+        return `${hours}小时`;
+    } else {
+        return `${minutes}分钟`;
+    }
+}
+
+// 展开/折叠所有藏身处
+function toggleAllStations() {
+    const stations = document.querySelectorAll('.hideout-station');
+    const firstStation = stations[0];
+    const isExpanded = firstStation.querySelector('.station-levels').classList.contains('expanded');
+    
+    stations.forEach(station => {
+        const levels = station.querySelector('.station-levels');
+        const toggle = station.querySelector('.station-toggle');
+        
+        if (isExpanded) {
+            levels.classList.remove('expanded');
+            toggle.classList.remove('expanded');
+        } else {
+            levels.classList.add('expanded');
+            toggle.classList.add('expanded');
+        }
     });
 }
 
@@ -227,10 +434,13 @@ function initTasksInterface() {
         });
     }
     
-    // 默认渲染普拉波的任务图
-    setTimeout(() => {
-        renderTaskGraph('prapor');
-    }, 100);
+    // 获取所有任务数据
+    fetchAllTasks().then(() => {
+        // 默认渲染普拉波的任务图
+        setTimeout(() => {
+            renderTaskGraph('prapor');
+        }, 100);
+    });
     
     // 窗口调整大小时重绘任务图，但保持缩放状态
     window.addEventListener('resize', function() {
@@ -250,6 +460,166 @@ function initTasksInterface() {
                 }
             }, 300);
         }
+    });
+}
+
+// 获取所有任务数据
+function fetchAllTasks() {
+    const query = `
+    {
+      tasks(lang: zh, gameMode: pve) {
+        id
+        taskImageLink
+        name
+        map {
+          name
+        }
+        trader {
+          name
+        }
+        minPlayerLevel
+        taskRequirements {
+          task {
+            id
+            name
+            minPlayerLevel
+          }
+        }
+        objectives {
+          description
+          ... on TaskObjectiveItem {
+            count
+            item {
+              name
+            }
+          }
+          ... on TaskObjectiveShoot {
+            count
+          }
+          optional
+        }
+      }
+    }`;
+
+    return fetch('https://api.tarkov.dev/graphql', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        },
+        body: JSON.stringify({query: query})
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('网络响应不正常');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.errors) {
+            throw new Error(data.errors[0].message);
+        }
+        allTasksData = data.data.tasks;
+        console.log('所有任务数据加载完成', allTasksData);
+    })
+    .catch(error => {
+        console.error('获取所有任务数据失败:', error);
+    });
+}
+
+// 获取任务详情
+function fetchTaskDetail(taskId) {
+    const query = `
+    query {
+      task(gameMode: pve, lang: zh, id: "${taskId}") {
+        taskImageLink
+        name
+        map {
+          name
+        }
+        trader {
+          name
+        }
+        minPlayerLevel
+        taskRequirements {
+          task {
+            id
+            name
+            minPlayerLevel
+          }
+        }
+        objectives {
+          description
+          ... on TaskObjectiveItem {
+            count
+            item {
+              name
+            }
+          }
+          ... on TaskObjectiveShoot {
+            count
+          }
+          optional
+        }
+        experience
+        finishRewards {
+          traderUnlock {
+            name
+          }
+          traderStanding {
+            trader {
+              name
+            }
+            standing
+          }
+          items {
+            quantity
+            item {
+              name
+              iconLink
+            }
+          }
+          offerUnlock {
+            item {
+              name
+              iconLink
+            }
+          }
+          craftUnlock {
+            rewardItems {
+              item {
+                name
+                iconLink
+              }
+            }
+          }
+        }
+      }
+    }`;
+
+    return fetch('https://api.tarkov.dev/graphql', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        },
+        body: JSON.stringify({query: query})
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('网络响应不正常');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.errors) {
+            throw new Error(data.errors[0].message);
+        }
+        return data.data.task;
+    })
+    .catch(error => {
+        console.error('获取任务详情失败:', error);
+        return null;
     });
 }
 
@@ -318,7 +688,7 @@ function renderTaskGraph(traderName) {
     // 创建组用于缩放
     const g = svg.append('g');
     
-    // 从表格数据获取任务信息
+    // 从API数据获取任务信息
     const tasks = generateTasks(traderName);
     
     // 定义节点尺寸
@@ -480,45 +850,45 @@ function renderTaskGraph(traderName) {
                 .style('pointer-events', 'none');
         }
     });
-	
-	// 添加任务类型标签
-	node.each(function(d) {
-		const nodeElement = d3.select(this);
-		
-		if (d.types && d.types.length > 0) {
-			d.types.forEach((type, index) => {
-				const labelText = type === 'fairy' ? '仙女棒' : '3 x 4';
-				const labelWidth = type === 'fairy' ? 28 : 28; // 根据文本长度调整宽度
-				const labelHeight = 12;
-				
-				// 计算标签位置（从右向左排列）
-				const xPosition = nodeWidth/2 - 25 - (index * (labelWidth + 5));
-				const yPosition = nodeHeight/2 - 15;
-				
-				// 添加标签背景矩形
-				nodeElement.append('rect')
-					.attr('class', `task-type-label ${type}`)
-					.attr('x', xPosition - labelWidth/2)
-					.attr('y', yPosition - labelHeight/2)
-					.attr('width', labelWidth)
-					.attr('height', labelHeight)
-					.attr('rx', 2)
-					.attr('ry', 2);
-				
-				// 添加标签文本
-				nodeElement.append('text')
-					.text(labelText)
-					.attr('text-anchor', 'middle')
-					.attr('x', xPosition)
-					.attr('y', yPosition + 3) // 微调垂直位置
-					.style('font-size', '8px')
-					.style('font-weight', 'bold')
-					.style('fill', '#fff')
-					.style('pointer-events', 'none');
-			});
-		}
-	});
-	
+    
+    // 添加任务类型标签
+    node.each(function(d) {
+        const nodeElement = d3.select(this);
+        
+        if (d.types && d.types.length > 0) {
+            d.types.forEach((type, index) => {
+                const labelText = type === 'fairy' ? '仙女棒' : '3 x 4';
+                const labelWidth = type === 'fairy' ? 28 : 28; // 根据文本长度调整宽度
+                const labelHeight = 12;
+                
+                // 计算标签位置（从右向左排列）
+                const xPosition = nodeWidth/2 - 25 - (index * (labelWidth + 5));
+                const yPosition = nodeHeight/2 - 15;
+                
+                // 添加标签背景矩形
+                nodeElement.append('rect')
+                    .attr('class', `task-type-label ${type}`)
+                    .attr('x', xPosition - labelWidth/2)
+                    .attr('y', yPosition - labelHeight/2)
+                    .attr('width', labelWidth)
+                    .attr('height', labelHeight)
+                    .attr('rx', 2)
+                    .attr('ry', 2);
+                
+                // 添加标签文本
+                nodeElement.append('text')
+                    .text(labelText)
+                    .attr('text-anchor', 'middle')
+                    .attr('x', xPosition)
+                    .attr('y', yPosition + 3) // 微调垂直位置
+                    .style('font-size', '8px')
+                    .style('font-weight', 'bold')
+                    .style('fill', '#fff')
+                    .style('pointer-events', 'none');
+            });
+        }
+    });
+    
     // 添加文本截断函数（辅助函数）
     function truncateText(text, maxWidth, fontSize) {
         // 最大字符数（包括圆点和省略号）
@@ -528,49 +898,50 @@ function renderTaskGraph(traderName) {
         }
         return text;
     }
+    
     // 添加鼠标悬停事件 - 显示任务目标提示框
-	node.on('mouseover', function(event, d) {
-		event.stopPropagation();
-		
-		// 获取任务目标数组
-		const objectives = Array.isArray(d.objective) ? d.objective : [d.objective];
-		
-		// 创建提示框内容
-		let tooltipContent = '';
-		objectives.forEach((objective, index) => {
-			tooltipContent += `<div class="objective-tooltip-item">${index + 1}. ${objective}</div>`;
-		});
-		
-		// 创建或更新提示框
-		let tooltip = d3.select('#objective-tooltip');
-		if (tooltip.empty()) {
-			tooltip = d3.select('body').append('div')
-				.attr('id', 'objective-tooltip')
-				.attr('class', 'objective-tooltip');
-		}
-		
-		tooltip.html(`
-			<div class="objective-tooltip-header">${d.name} - 任务目标</div>
-			<div class="objective-tooltip-content">${tooltipContent}</div>
-		`)
-		.style('display', 'block')
-		.style('left', (event.pageX + 15) + 'px')
-		.style('top', (event.pageY - 15) + 'px');
-	});
+    node.on('mouseover', function(event, d) {
+        event.stopPropagation();
+        
+        // 获取任务目标数组
+        const objectives = Array.isArray(d.objective) ? d.objective : [d.objective];
+        
+        // 创建提示框内容
+        let tooltipContent = '';
+        objectives.forEach((objective, index) => {
+            tooltipContent += `<div class="objective-tooltip-item">${index + 1}. ${objective}</div>`;
+        });
+        
+        // 创建或更新提示框
+        let tooltip = d3.select('#objective-tooltip');
+        if (tooltip.empty()) {
+            tooltip = d3.select('body').append('div')
+                .attr('id', 'objective-tooltip')
+                .attr('class', 'objective-tooltip');
+        }
+        
+        tooltip.html(`
+            <div class="objective-tooltip-header">${d.name} - 任务目标</div>
+            <div class="objective-tooltip-content">${tooltipContent}</div>
+        `)
+        .style('display', 'block')
+        .style('left', (event.pageX + 15) + 'px')
+        .style('top', (event.pageY - 15) + 'px');
+    });
 
-	// 添加鼠标移动事件 - 更新提示框位置
-	node.on('mousemove', function(event) {
-		d3.select('#objective-tooltip')
-			.style('left', (event.pageX + 15) + 'px')
-			.style('top', (event.pageY - 15) + 'px');
-	});
+    // 添加鼠标移动事件 - 更新提示框位置
+    node.on('mousemove', function(event) {
+        d3.select('#objective-tooltip')
+            .style('left', (event.pageX + 15) + 'px')
+            .style('top', (event.pageY - 15) + 'px');
+    });
 
-	// 添加鼠标离开事件 - 隐藏提示框
-	node.on('mouseout', function(event) {
-		event.stopPropagation();
-		d3.select('#objective-tooltip').style('display', 'none');
-	});
-	
+    // 添加鼠标离开事件 - 隐藏提示框
+    node.on('mouseout', function(event) {
+        event.stopPropagation();
+        d3.select('#objective-tooltip').style('display', 'none');
+    });
+    
     // 节点点击事件 - 显示任务详情提示框并选中节点
     node.on('click', function(event, d) {
         event.stopPropagation(); // 防止事件冒泡影响缩放
@@ -642,60 +1013,111 @@ function renderTaskGraph(traderName) {
     }
 }
 
+// 生成任务数据 - 从API数据导入，支持多分支连接
+function generateTasks(traderName) {
+    const nodes = [];
+    const links = [];
+    
+    // 从本地存储加载该商人的任务进度
+    const savedProgress = getTraderProgress(traderName);
+    
+    // 从所有任务数据中筛选出当前商人的任务
+    const traderEnglishName = TRADER_NAME_MAP[traderName] || traderName;
+    const traderTasks = allTasksData.filter(task => task.trader.name === traderEnglishName);
+    
+    console.log(`加载商人 ${traderName} 的任务数据:`, traderTasks);
+    
+    // 创建节点
+    traderTasks.forEach((task, i) => {
+        // 确保任务数据存在
+        if (!task) {
+            console.warn(`任务数据为空: ${traderName}-${i}`);
+            return;
+        }
+        
+        const taskId = task.id;
+        const isCompleted = savedProgress[taskId] || false;
+        
+        // 从POSITION_DATA获取位置和类型
+        const positionInfo = POSITION_DATA[taskId] || { gridPosition: { x: i, y: 0 }, types: [] };
+        
+        // 处理任务目标，添加count和optional
+        const objectives = task.objectives ? task.objectives.map(obj => {
+            let desc = obj.description;
+            if (obj.optional) {
+                desc = "(可选)" + desc;
+            }
+            if (obj.count) {
+                desc += ` (${obj.count})`;
+            }
+            return desc;
+        }) : ["暂无目标"];
+        
+        nodes.push({
+            id: i,
+            taskId: taskId,
+            name: task.name || "未知任务",
+            location: task.map ? task.map.name : "任意",
+            level: task.minPlayerLevel || 1,
+            objective: objectives,
+            rewards: [], // 暂时为空，因为奖励信息在任务详情中
+            image: task.taskImageLink || "img/tasks/default.jpg",
+            detailImage: task.taskImageLink || "img/tasks/default.jpg",
+            completed: isCompleted,
+            nextTasks: [], // 我们将根据前置任务来设置
+            gridPosition: positionInfo.gridPosition,
+            types: positionInfo.types
+        });
+    });
+    
+    // 创建连线 - 基于每个任务的前置任务创建连接
+    nodes.forEach((node, i) => {
+        const task = traderTasks[i];
+        if (task.taskRequirements && task.taskRequirements.length > 0) {
+            task.taskRequirements.forEach(req => {
+                // 找到前置任务在节点中的索引
+                const targetIndex = nodes.findIndex(n => n.taskId === req.task.id);
+                if (targetIndex !== -1) {
+                    links.push({
+                        source: targetIndex,
+                        target: i,
+                        type: 'normal'
+                    });
+                }
+            });
+        }
+    });
+    
+    // 如果没有前置任务，则创建默认的线性连接（向后兼容）
+    if (links.length === 0) {
+        for (let i = 0; i < traderTasks.length - 1; i++) {
+            links.push({
+                source: i,
+                target: i + 1,
+                type: 'default'
+            });
+        }
+    }
+    
+    console.log(`生成 ${traderName} 的任务图: ${nodes.length} 个节点, ${links.length} 条连线`);
+    
+    return { nodes, links };
+}
 
 // 显示任务详情提示框
 function showTaskTooltip(d, traderName) {
     const taskTooltip = document.getElementById('task-tooltip');
     
-    // 修复：从本地存储重新获取任务状态，确保显示最新状态
-    const savedProgress = getTraderProgress(traderName);
-    const currentStatus = savedProgress[d.taskId] || false;
-    d.completed = currentStatus;
-    
-    const statusText = d.completed ? '未完成' : '已完成';
-    const statusButtonClass = d.completed ? 'incomplete' : 'completed';
-    const statusButtonText = d.completed ? '已完成' : '未完成';
-    
-    // 富文本内容示例 - 这里可以根据任务ID或其他条件显示不同的内容
-    const htmlContent = generateTaskHTMLContent(d);
-    
+    // 显示加载提示 - 居中显示
     taskTooltip.innerHTML = `
         <div class="task-tooltip-header">
-            <div class="task-tooltip-title">${d.name}</div>
+            <div class="task-tooltip-title">任务详情</div>
             <button class="task-tooltip-close">&times;</button>
         </div>
         <div class="task-tooltip-info">
-            <img src="${d.detailImage}" class="task-image" alt="${d.name}">
-            <div class="task-info-row">
-                <div><strong>地点:</strong> ${d.location}</div>
-                <div><strong>要求等级:</strong> ${d.level}</div>
-            </div>
-            <div class="task-objectives">
-                <div class="task-section-title">任务目标</div>
-                ${Array.isArray(d.objective) ? 
-                    d.objective.map(obj => `<div class="task-objective">• ${obj}</div>`).join('') : 
-                    `<div class="task-objective">• ${d.objective}</div>`
-                }
-            </div>
-            <div class="task-rewards">
-                <div class="task-section-title">任务奖励</div>
-                ${Array.isArray(d.rewards) ? 
-                    d.rewards.map(reward => `<div class="task-reward">• ${reward}</div>`).join('') : 
-                    `<div class="task-reward">• ${d.rewards}</div>`
-                }
-            </div>
-            <div class="task-Guide">
-                <div class="task-section-title">任务攻略</div>
-                ${htmlContent}
-            </div>
-        </div>
-        <div class="task-actions">
-            <button class="status-toggle-btn ${statusButtonClass}" data-task-id="${d.taskId}" data-trader="${traderName}">
-                ${statusButtonText}
-            </button>
+            <div class="loading-detail">获取情报中...</div>
         </div>
     `;
-    
     taskTooltip.style.display = 'flex';
     
     // 添加关闭按钮事件
@@ -707,60 +1129,189 @@ function showTaskTooltip(d, traderName) {
         });
     }
     
-    // 添加状态切换按钮事件
-    const statusToggleBtn = taskTooltip.querySelector('.status-toggle-btn');
-    if (statusToggleBtn) {
-        statusToggleBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const taskId = this.getAttribute('data-task-id');
-            const trader = this.getAttribute('data-trader');
-            
-            // 切换任务完成状态
-            toggleTaskStatus(taskId, trader, d);
-			
-			
-            taskTooltip.style.display = 'none';
-            
-            // 更新提示框中的状态显示
-            const newCompletedStatus = !d.completed;
-            
-            if (newCompletedStatus) {
-                this.textContent = '未完成';
-                this.className = 'status-toggle-btn completed';
-            } else {
-                this.textContent = '已完成';
-                this.className = 'status-toggle-btn incomplete';
-            }
-        });
-    }
+    // 获取任务详情
+    fetchTaskDetail(d.taskId).then(taskDetail => {
+        if (!taskDetail) {
+            taskTooltip.innerHTML = `
+                <div class="task-tooltip-header">
+                    <div class="task-tooltip-title">加载失败</div>
+                    <button class="task-tooltip-close">&times;</button>
+                </div>
+                <div class="task-tooltip-info">
+                    <div class="loading-detail">加载任务详情失败，请重试。</div>
+                </div>
+            `;
+            return;
+        }
+        
+        // 修复：从本地存储重新获取任务状态，确保显示最新状态
+        const savedProgress = getTraderProgress(traderName);
+        const currentStatus = savedProgress[d.taskId] || false;
+        d.completed = currentStatus;
+        
+        const statusText = d.completed ? '未完成' : '已完成';
+        const statusButtonClass = d.completed ? 'incomplete' : 'completed';
+        const statusButtonText = d.completed ? '已完成' : '未完成';
+        
+		// 生成奖励HTML - 传入整个taskDetail对象
+		const rewardsHTML = generateRewardsHTML(taskDetail);
+        
+        taskTooltip.innerHTML = `
+            <div class="task-tooltip-header">
+                <div class="task-tooltip-title">${taskDetail.name}</div>
+                <button class="task-tooltip-close">&times;</button>
+            </div>
+            <div class="task-tooltip-info">
+                <img src="${taskDetail.taskImageLink}" class="task-image" alt="${taskDetail.name}">
+                <div class="task-info-row">
+                    <div><strong>地点:</strong> ${taskDetail.map ? taskDetail.map.name : '任意'}</div>
+                    <div><strong>要求等级:</strong> ${taskDetail.minPlayerLevel || 1}</div>
+                </div>
+                <div class="task-objectives">
+                    <div class="task-section-title">任务目标</div>
+                    ${taskDetail.objectives ? taskDetail.objectives.map(obj => {
+                        let desc = obj.description;
+                        if (obj.optional) {
+                            desc = "(可选)" + desc;
+                        }
+                        if (obj.count) {
+                            desc += ` (${obj.count})`;
+                        }
+                        return `<div class="task-objective">• ${desc}</div>`;
+                    }).join('') : '<div class="task-objective">暂无目标</div>'}
+                </div>
+                <div class="task-rewards">
+                    <div class="task-section-title">任务奖励</div>
+                    ${rewardsHTML}
+                </div>
+            </div>
+            <div class="task-actions">
+                <button class="status-toggle-btn ${statusButtonClass}" data-task-id="${d.taskId}" data-trader="${traderName}">
+                    ${statusButtonText}
+                </button>
+            </div>
+        `;
+        
+        // 添加关闭按钮事件
+        const closeBtn = taskTooltip.querySelector('.task-tooltip-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                taskTooltip.style.display = 'none';
+            });
+        }
+        
+        // 添加状态切换按钮事件
+        const statusToggleBtn = taskTooltip.querySelector('.status-toggle-btn');
+        if (statusToggleBtn) {
+            statusToggleBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const taskId = this.getAttribute('data-task-id');
+                const trader = this.getAttribute('data-trader');
+                
+                // 切换任务完成状态
+                toggleTaskStatus(taskId, trader, d);
+                
+                taskTooltip.style.display = 'none';
+                
+                // 更新提示框中的状态显示
+                const newCompletedStatus = !d.completed;
+                
+                if (newCompletedStatus) {
+                    this.textContent = '未完成';
+                    this.className = 'status-toggle-btn completed';
+                } else {
+                    this.textContent = '已完成';
+                    this.className = 'status-toggle-btn incomplete';
+                }
+            });
+        }
+    });
 }
 
-// 生成任务富文本内容
-function generateTaskHTMLContent(taskData) {
-    // 这里可以根据任务ID、名称或其他属性生成不同的富文本内容
-    // 示例：为特定任务生成攻略内容
-    const taskId = taskData.taskId;
+// 生成奖励HTML
+function generateRewardsHTML(taskDetail) {
+    if (!taskDetail) return '<div class="reward-item">暂无奖励</div>';
     
-    // 示例内容 - 实际使用时可以根据具体任务定制
-    let html = `
-        <ul>
-            <li><strong>推荐装备：</strong>根据任务地点选择合适的武器和护甲</li>
-            <li><strong>注意事项：</strong>注意周围敌人位置，合理规划路线</li>
-            <li><strong>完成技巧：</strong>利用掩体，注意听声辨位</li>
-    `;
+    let html = '';
     
-    // 为特定任务添加特殊提示
-    if (taskId.includes('prapor-1')) {
-        html += `<li><strong>特殊提示：</strong>Utyos机枪位于中心区西侧建筑内</li>`;
-    } else if (taskId.includes('prapor-2')) {
-        html += `<li><strong>特殊提示：</strong>MP-133霰弹枪可以在Scav身上找到</li>`;
-    } else if (taskId.includes('prapor-4')) {
-        html += `<li><strong>特殊提示：</strong>青铜怀表位于海关建筑内的桌子上</li>`;
+    // 经验奖励 - 放在第一行（直接从taskDetail获取）
+    if (taskDetail.experience) {
+        html += `<div class="reward-item experience-reward">
+            <div class="reward-text">经验: ${taskDetail.experience}</div>
+        </div>`;
     }
     
-    html += `</ul>`;
+    // 声望奖励 - 放在第二行
+    if (taskDetail.finishRewards && taskDetail.finishRewards.traderStanding && taskDetail.finishRewards.traderStanding.length > 0) {
+        taskDetail.finishRewards.traderStanding.forEach(standing => {
+            const traderImage = `img/npc/${standing.trader.name}.jpg`;
+            html += `<div class="reward-item standing-reward">
+                <img src="${traderImage}" class="reward-image" alt="${standing.trader.name}" onerror="this.style.display='none'">
+                <div class="reward-info">
+                    <div class="reward-quantity">+${standing.standing}</div>
+                    <div class="reward-name">${standing.trader.name} 声望</div>
+                </div>
+            </div>`;
+        });
+    }
     
-    return html;
+    // 物品奖励
+    if (taskDetail.finishRewards && taskDetail.finishRewards.items && taskDetail.finishRewards.items.length > 0) {
+        taskDetail.finishRewards.items.forEach(item => {
+            html += `<div class="reward-item">
+                <img src="${item.item.iconLink}" class="reward-image" alt="${item.item.name}">
+                <div class="reward-info">
+                    <div class="reward-quantity">x${item.quantity}</div>
+                    <div class="reward-name">${item.item.name}</div>
+                </div>
+            </div>`;
+        });
+    }
+    
+    // 解锁商人 - 紫色
+    if (taskDetail.finishRewards && taskDetail.finishRewards.traderUnlock && taskDetail.finishRewards.traderUnlock.length > 0) {
+        taskDetail.finishRewards.traderUnlock.forEach(trader => {
+            const traderImage = `img/npc/${trader.name}.jpg`;
+            html += `<div class="reward-item">
+                <img src="${traderImage}" class="reward-image" alt="${trader.name}" onerror="this.style.display='none'">
+                <div class="reward-info">
+					<div class="trader-unlock"><strong>新增商人</strong></div>
+                    <div class="reward-name">${trader.name}</div>
+                </div>
+            </div>`;
+        });
+    }
+    
+    // 解锁商品 - 蓝色
+    if (taskDetail.finishRewards && taskDetail.finishRewards.offerUnlock && taskDetail.finishRewards.offerUnlock.length > 0) {
+        taskDetail.finishRewards.offerUnlock.forEach(offer => {
+            html += `<div class="reward-item">
+                <img src="${offer.item.iconLink}" class="reward-image" alt="${offer.item.name}">
+                <div class="reward-info">
+                    <div class="offer-unlock"><strong>新增商品</strong></div>
+                    <div class="reward-name">${offer.item.name}</div>
+                </div>
+            </div>`;
+        });
+    }
+    
+    // 解锁工艺 - 橙色
+    if (taskDetail.finishRewards && taskDetail.finishRewards.craftUnlock && taskDetail.finishRewards.craftUnlock.length > 0) {
+        taskDetail.finishRewards.craftUnlock.forEach(craft => {
+            craft.rewardItems.forEach(item => {
+                html += `<div class="reward-item">
+                    <img src="${item.item.iconLink}" class="reward-image" alt="${item.item.name}">
+                    <div class="reward-info">
+                        <div class="craft-unlock"><strong>新增工艺</strong></div>
+                        <div class="reward-name">${item.item.name}</div>
+                    </div>
+                </div>`;
+            });
+        });
+    }
+    
+    return html || '<div class="reward-item">暂无奖励</div>';
 }
 
 // 切换任务状态
@@ -786,84 +1337,6 @@ function toggleTaskStatus(taskId, traderName, taskData) {
     
     // 更新进度显示
     updateProgressDisplay(traderName);
-}
-
-// 生成任务数据 - 从表格数据导入，支持多分支连接
-function generateTasks(traderName) {
-    const nodes = [];
-    const links = [];
-    
-    // 从本地存储加载该商人的任务进度
-    const savedProgress = getTraderProgress(traderName);
-    
-    // 从表格数据获取任务信息
-    const traderTasks = TASKS_DATA[traderName] || [];
-    
-    console.log(`加载商人 ${traderName} 的任务数据:`, traderTasks);
-    
-    // 创建节点
-    traderTasks.forEach((task, i) => {
-        // 确保任务数据存在
-        if (!task) {
-            console.warn(`任务数据为空: ${traderName}-${i}`);
-            return;
-        }
-        
-        const taskId = `${traderName}-${task.id || i}`;
-        const isCompleted = savedProgress[taskId] || false;
-        
-        // 确保gridPosition存在
-        const gridPos = task.gridPosition || { x: i, y: 0 };
-        
-        nodes.push({
-            id: i,
-            taskId: taskId,
-            name: task.name || "未知任务",
-            location: task.location || "未知地点",
-            level: task.level || 1,
-            objective: task.objective || ["暂无目标"],
-            rewards: task.rewards || ["暂无奖励"],
-            image: task.image || "img/tasks/default.jpg",
-            detailImage: task.detailImage || task.image || "img/tasks/default.jpg",
-            completed: isCompleted,
-            nextTasks: task.next || [],
-            gridPosition: gridPos,  // 确保gridPosition被传递
-			types: task.types || []  // 确保包含types字段
-        });
-        
-    });
-    
-    // 创建连线 - 基于每个任务的next数组创建多分支连接
-    nodes.forEach((node, i) => {
-        if (node.nextTasks && node.nextTasks.length > 0) {
-            node.nextTasks.forEach(targetIndex => {
-                // 确保目标索引在有效范围内
-                if (targetIndex >= 0 && targetIndex < nodes.length) {
-                    links.push({
-                        source: i,
-                        target: targetIndex,
-                        // 可以添加连线类型标识，用于后续样式区分
-                        type: 'normal'
-                    });
-                }
-            });
-        }
-    });
-    
-    // 如果没有定义next数组，则创建默认的线性连接（向后兼容）
-    if (links.length === 0) {
-        for (let i = 0; i < traderTasks.length - 1; i++) {
-            links.push({
-                source: i,
-                target: i + 1,
-                type: 'default'
-            });
-        }
-    }
-    
-    console.log(`生成 ${traderName} 的任务图: ${nodes.length} 个节点, ${links.length} 条连线`);
-    
-    return { nodes, links };
 }
 
 // 保存任务进度到本地存储
@@ -900,7 +1373,8 @@ function getTraderProgress(traderName) {
 // 计算并显示任务进度
 function updateProgressDisplay(traderName) {
     const savedProgress = getTraderProgress(traderName);
-    const traderTasks = TASKS_DATA[traderName] || [];
+    const traderEnglishName = TRADER_NAME_MAP[traderName] || traderName;
+    const traderTasks = allTasksData ? allTasksData.filter(task => task.trader.name === traderEnglishName) : [];
     const totalTasks = traderTasks.length;
     
     // 计算已完成任务数量

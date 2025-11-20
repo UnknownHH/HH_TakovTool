@@ -334,6 +334,175 @@ body {
     background-color: #b71c1c;
 }
 
+/* ===== 藏身处升级样式 ===== */
+.hideout-container {
+    padding: 120px 20px 20px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.hideout-title {
+    color: #eee;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 24px;
+}
+
+.hideout-controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+
+.hideout-btn {
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.hideout-btn:hover {
+    background-color: #45a049;
+}
+
+.hideout-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.hideout-station {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.station-header {
+    padding: 15px;
+    background-color: rgba(76, 175, 80, 0.2);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.3s;
+}
+
+.station-header:hover {
+    background-color: rgba(76, 175, 80, 0.3);
+}
+
+.station-name {
+    font-size: 18px;
+    color: #eee;
+    margin: 0;
+}
+
+.station-toggle {
+    font-size: 20px;
+    color: #eee;
+    transition: transform 0.3s;
+}
+
+.station-toggle.expanded {
+    transform: rotate(180deg);
+}
+
+.station-levels {
+    display: none;
+    padding: 0;
+}
+
+.station-levels.expanded {
+    display: block;
+}
+
+.station-level {
+    border-bottom: 1px solid #444;
+    padding: 15px;
+}
+
+.station-level:last-child {
+    border-bottom: none;
+}
+
+.level-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.level-title {
+    font-size: 16px;
+    color: #4CAF50;
+    margin: 0;
+}
+
+.construction-time {
+    font-size: 14px;
+    color: #ccc;
+}
+
+.level-description {
+    margin-bottom: 15px;
+    color: #ccc;
+    line-height: 1.5;
+}
+
+.item-requirements {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.item-requirement {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.item-image {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.item-info {
+    flex: 1;
+}
+
+.item-name {
+    display: block;
+    font-size: 14px;
+    color: #eee;
+}
+
+.item-quantity {
+    display: block;
+    font-size: 12px;
+    color: #4CAF50;
+}
+
+.loading, .error {
+    text-align: center;
+    padding: 40px;
+    font-size: 18px;
+    color: #ccc;
+}
+
+.error {
+    color: #f44336;
+}
+
 /* ===== 任务提示框样式 ===== */
 .task-tooltip {
     position: fixed;
@@ -545,13 +714,131 @@ body {
     margin-bottom: 0;
 }
 
-/* ===== 物品界面样式 ===== */
-.items-container {
-    padding: 20px;
+/* ===== 奖励物品样式 ===== */
+.reward-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 5px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.reward-image {
+    width: 50px;
+    height: 50px;
+    margin-right: 10px;
+    object-fit: contain;
+}
+
+.reward-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.reward-name {
+    font-size: 16px;
+    color: #eee;
+    margin-bottom: 2px;
+}
+
+.reward-quantity {
+    font-weight: bold;
+    color: #4CAF50;
+}
+
+.reward-text {
+    font-size: 16px;
+    color: #eee;
+    padding: 5px 0;
+}
+/* ===== 任务目标和奖励条目统一样式 ===== */
+.task-objective, .reward-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 8px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    line-height: 1.4;
+}
+
+.task-objective {
+    font-size: 16px;
+    color: #eee;
+}
+
+/* 加载提示居中样式 */
+.loading-detail {
     display: flex;
     justify-content: center;
     align-items: center;
+    height: 200px;
+    font-size: 18px;
+    color: #ccc;
+}
+
+/* 奖励物品样式 */
+.reward-image {
+    width: 50px;
+    height: 50px;
+    margin-right: 10px;
+    object-fit: contain;
+}
+
+.reward-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.reward-quantity {
+    font-weight: bold;
+    color: #4CAF50;
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.reward-name {
+    font-size: 16px;
+    color: #eee;
+}
+
+/* 特殊解锁类型颜色 */
+.craft-unlock {
+    color: #FF9800; /* 橙色 */
+}
+
+.offer-unlock {
+    color: #2196F3; /* 蓝色 */
+}
+
+.trader-unlock {
+    color: #9C27B0; /* 紫色 */
+}
+
+.reward-text {
+    font-size: 16px;
+    padding: 5px 0;
+}
+
+/* 经验奖励特殊样式 */
+.experience-reward {
+    background-color: rgba(76, 175, 80, 0.2);
+    border-left: 3px solid #4CAF50;
+}
+
+/* 声望奖励特殊样式 */
+.standing-reward {
+    background-color: rgba(33, 150, 243, 0.2);
+    border-left: 3px solid #2196F3;
+}
+
+/* ===== 物品界面样式 ===== */
+.items-container {
     height: 100%;
+    overflow: hidden;
 }
 
 .coming-soon {
@@ -658,5 +945,3 @@ body {
 .leaflet-control-attribution {
     display: none !important;
 }
-
-

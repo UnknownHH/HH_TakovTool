@@ -7,10 +7,13 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <!-- 自定义CSS -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/map.css">
+    <link rel="stylesheet" href="css/tasks.css">
+    <link rel="stylesheet" href="css/items.css">
 </head>
 <body>
-	<!-- 顶部导航栏 - 修改为浮动样式 -->
+	<!-- 顶部导航栏 -->
 	<div class="top-navbar">
 		<div class="nav-container">
 			<div class="nav-item active" data-target="map">
@@ -42,9 +45,7 @@
 
     <!-- 地图界面 -->
     <div class="content active" id="map-content">
-        <!-- 地图内容保持不变 -->
         <div class="main-view">
-			<!-- 添加浮动控制栏 -->
 			<div class="floating-controls">
 				<div class="map-controls">
 					<div class="map-style-control">
@@ -125,9 +126,7 @@
 
     <!-- 任务界面 -->
     <div class="content" id="tasks-content">
-        <!-- 任务内容保持不变 -->
         <div class="main-view">
-			 <!-- 添加浮动控制栏 -->
 			<div class="floating-controls">
 				<div class="task-controls">
 					<div class="progress-controls">
@@ -155,7 +154,7 @@
                     </div>
                     <div class="dock-name">Therapist</div>
                 </div>
-                <div class="dock-item" data-trader="Fence">
+                <div class="dock-item" data-trader="fence">
                     <div class="dock-icon">
                         <img src="img/NPC/Fence.jpg" alt="黑商">
                     </div>
@@ -191,19 +190,19 @@
                     </div>
                     <div class="dock-name">Jaeger</div>
                 </div>
-                <div class="dock-item" data-trader="Lightkeeper">
+                <div class="dock-item" data-trader="lightkeeper">
                     <div class="dock-icon">
                         <img src="img/NPC/Lightkeeper.jpg" alt="Lightkeeper">
                     </div>
                     <div class="dock-name">Lightkeeper</div>
                 </div>
-                <div class="dock-item" data-trader="Ref">
+                <div class="dock-item" data-trader="竞技场裁判">
                     <div class="dock-icon">
                         <img src="img/NPC/Ref.jpg" alt="裁判">
                     </div>
                     <div class="dock-name">竞技场裁判</div>
                 </div>
-                <div class="dock-item" data-trader="BTR">
+                <div class="dock-item" data-trader="BTR司机">
                     <div class="dock-icon">
                         <img src="img/NPC/BTR.jpg" alt="BTR司机">
                     </div>
@@ -233,18 +232,38 @@
             </div>
         </div>
     </div>
-
-    <!-- Leaflet JS -->
+	
+	<!-- 统一的加载动画组件 -->
+	<div id="global-loading" class="loading-animation" style="display: none;">
+		<div class="loading-spinner"></div>
+		<div class="loading-text">加载中...</div>
+		<div class="loading-subtext">请稍候</div>
+	</div>
+	
+    <!-- 第三方库 -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <!-- D3.js -->
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-    <!-- jQuery (Panzoom依赖) -->
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-    <!-- Panzoom -->
     <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
-    <!-- 任务数据 -->
+    
+    <!-- 数据文件 -->
     <script src="position_data.js"></script>
-    <!-- 自定义JS -->
-    <script src="script.js"></script>
+    <script src="data/tasks/data-prapor.js"></script>
+    <script src="data/tasks/data-therapist.js"></script>
+    <script src="data/tasks/data-fence.js"></script>
+    <script src="data/tasks/data-skier.js"></script>
+    <script src="data/tasks/data-peacekeeper.js"></script>
+    <script src="data/tasks/data-mechanic.js"></script>
+    <script src="data/tasks/data-ragman.js"></script>
+    <script src="data/tasks/data-jaeger.js"></script>
+    <script src="data/tasks/data-lightkeeper.js"></script>
+    <script src="data/tasks/data-竞技场裁判.js"></script>
+    <script src="data/tasks/data-btr司机.js"></script>
+    
+    <!-- 自定义模块 -->
+    <script src="js/script.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/tasks.js"></script>
+    <script src="js/items.js"></script>
 </body>
 </html>

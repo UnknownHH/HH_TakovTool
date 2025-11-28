@@ -1,0 +1,153 @@
+/* ===== 藏身处升级样式 ===== */
+.hideout-container {
+    padding: 120px 20px 20px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.hideout-title {
+    color: #eee;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 24px;
+}
+
+.hideout-controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+
+.hideout-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.hideout-station {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.station-header {
+    padding: 15px;
+    background-color: rgba(76, 175, 80, 0.2);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.3s;
+}
+
+.station-header:hover {
+    background-color: rgba(76, 175, 80, 0.3);
+}
+
+.station-name {
+    font-size: 18px;
+    color: #eee;
+    margin: 0;
+}
+
+.station-toggle {
+    font-size: 20px;
+    color: #eee;
+    transition: transform 0.3s;
+}
+
+.station-toggle.expanded {
+    transform: rotate(180deg);
+}
+
+.station-levels {
+    display: none;
+    padding: 0;
+}
+
+.station-levels.expanded {
+    display: block;
+}
+
+.station-level {
+    border-bottom: 1px solid #444;
+    padding: 15px;
+}
+
+.station-level:last-child {
+    border-bottom: none;
+}
+
+.level-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.level-title {
+    font-size: 16px;
+    color: #4CAF50;
+    margin: 0;
+}
+
+.construction-time {
+    font-size: 14px;
+    color: #ccc;
+}
+
+.level-description {
+    margin-bottom: 15px;
+    color: #ccc;
+    line-height: 1.5;
+}
+
+.item-requirements {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.item-requirement {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.item-image {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.item-info {
+    flex: 1;
+}
+
+.item-name {
+    display: block;
+    font-size: 14px;
+    color: #eee;
+}
+
+.item-quantity {
+    display: block;
+    font-size: 12px;
+    color: #4CAF50;
+}
+
+.loading, .error {
+    text-align: center;
+    padding: 40px;
+    font-size: 18px;
+    color: #ccc;
+}
+
+.error {
+    color: #f44336;
+}

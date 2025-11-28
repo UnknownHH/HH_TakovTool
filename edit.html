@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务位置编辑器</title>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="position_data.js"></script>
+    <script src="data/tasks/data-prapor.js"></script>
+    <script src="data/tasks/data-therapist.js"></script>
+    <script src="data/tasks/data-fence.js"></script>
+    <script src="data/tasks/data-skier.js"></script>
+    <script src="data/tasks/data-peacekeeper.js"></script>
+    <script src="data/tasks/data-mechanic.js"></script>
+    <script src="data/tasks/data-ragman.js"></script>
+    <script src="data/tasks/data-jaeger.js"></script>
+    <script src="data/tasks/data-lightkeeper.js"></script>
+    <script src="data/tasks/data-竞技场裁判.js"></script>
+    <script src="data/tasks/data-btr司机.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #eee;
+            overflow: hidden;
+        }
+
+        .editor-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #2a2a2a;
+            border-right: 2px solid #444;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar h2 {
+            margin-bottom: 20px;
+            color: #4CAF50;
+            font-size: 20px;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        select, button {
+            width: 100%;
+            padding: 10px;
+            background: #333;
+            color: #eee;
+            border: 1px solid #555;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        select:hover, button:hover {
+            background: #3a3a3a;
+        }
+
+        button {
+            background: #4CAF50;
+            border: none;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button.secondary {
+            background: #2196F3;
+        }
+
+        button.secondary:hover {
+            background: #1976D2;
+        }
+
+        .type-checkboxes {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .type-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .type-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .type-checkbox label {
+            margin: 0;
+            cursor: pointer;
+            color: #ccc;
+        }
+
+        .task-list {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+        
+        .task-list::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+
+        .task-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #333;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .task-item:hover {
+            background: #3a3a3a;
+        }
+
+        .task-item.selected {
+            background: #4CAF50;
+        }
+
+        .task-item-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .task-item-id {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .task-item-position {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        .main-area {
+            flex: 1;
+            position: relative;
+            background: #1a1a1a;
+        }
+
+        #edit-graph {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: move;
+        }
+
+        .node rect {
+            fill: #2a2a2a;
+            stroke: #666;
+            stroke-width: 2;
+            rx: 8;
+        }
+
+        .node.selected rect {
+            stroke: #2196F3;
+            stroke-width: 4;
+        }
+
+        .node text {
+            fill: #eee;
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        .node-label {
+            font-weight: bold;
+            text-anchor: middle;
+        }
+
+        .node-id {
+            font-size: 10px;
+            fill: #999;
+        }
+
+        .grid-line {
+            stroke: #333;
+            stroke-width: 1;
+        }
+
+        .link {
+            fill: none;
+            stroke: #666;
+            stroke-width: 3;
+            stroke-opacity: 1;
+        }
+
+        .status-bar {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .export-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #4CAF50;
+            z-index: 1000;
+            max-width: 80%;
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .export-dialog.active {
+            display: block;
+        }
+
+        .export-dialog textarea {
+            width: 100%;
+            height: 400px;
+            background: #1a1a1a;
+            color: #eee;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+
+        .export-dialog-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-container">
+        <div class="sidebar">
+            <h2>任务位置编辑器</h2>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label>选择商人</label>
+                    <select id="trader-select">
+                        <option value="prapor">Prapor</option>
+                        <option value="therapist">Therapist</option>
+                        <option value="skier">Skier</option>
+                        <option value="peacekeeper">Peacekeeper</option>
+                        <option value="mechanic">Mechanic</option>
+                        <option value="ragman">Ragman</option>
+                        <option value="jaeger">Jaeger</option>
+                        <option value="fence">Fence</option>
+                        <option value="lightkeeper">Lightkeeper</option>
+                        <option value="竞技场裁判">竞技场裁判</option>
+                        <option value="BTR司机">BTR司机</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>任务类型</label>
+                    <div class="type-checkboxes">
+                        <div class="type-checkbox">
+                            <input type="checkbox" id="type-safe" value="safe">
+                            <label for="type-safe">安全箱 (3x4)</label>
+                        </div>
+                        <div class="type-checkbox">
+                            <input type="checkbox" id="type-fairy" value="fairy">
+                            <label for="type-fairy">仙女棒</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="export-btn" class="secondary">导出 position_data.js</button>
+                <button id="reset-btn">重置位置</button>
+            </div>
+
+            <div class="task-list" id="task-list">
+                <div class="loading">加载任务数据中...</div>
+            </div>
+        </div>
+
+        <div class="main-area">
+            <svg id="edit-graph"></svg>
+            <div class="status-bar">
+                <span id="status-text">就绪</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="export-dialog" id="export-dialog">
+        <h3 style="margin-bottom: 15px;">导出的 position_data.js</h3>
+        <textarea id="export-content" readonly></textarea>
+        <div class="export-dialog-actions">
+            <button onclick="copyToClipboard()">复制到剪贴板</button>
+            <button onclick="downloadFile()">下载文件</button>
+            <button onclick="closeExportDialog()">关闭</button>
+        </div>
+    </div>
+
+    <script>
+        const TRADER_CONFIG = {
+            prapor: { name: "Prapor" },
+            therapist: { name: "Therapist" },
+            skier: { name: "Skier" },
+            peacekeeper: { name: "Peacekeeper" },
+            mechanic: { name: "Mechanic" },
+            ragman: { name: "Ragman" },
+            jaeger: { name: "Jaeger" },
+            fence: { name: "Fence" },
+            lightkeeper: { name: "Lightkeeper" },
+            "竞技场裁判": { name: "竞技场裁判" },
+            "BTR司机": { name: "BTR司机" }
+        };
+
+        let allTasksData = [];
+        let currentTrader = 'prapor';
+        let currentSelectedNode = null;
+        let taskDataMap = {}; // taskId -> task data
+        let positionData = { ...POSITION_DATA };
+        let svg, g, zoom, linkGroup, nodeGroup;
+        const gridSpacing = 220;
+        const nodeWidth = 160;
+        const nodeHeight = 80;
+        let traderZoomStates = {}; // 保存每个商人的缩放状态
+        let currentTransform = null;
+        let nodes = []; // 保存当前节点数据
+        let links = []; // 保存当前连线数据
+        let isDragging = false; // 标记是否正在拖拽
+
+        // 初始化
+        async function init() {
+            await loadTasksData();
+            setupEventListeners();
+            renderGraph();
+        }
+
+        // 加载任务数据
+        async function loadTasksData() {
+            try {
+                // 从本地数据文件加载任务数据
+                const traderDataMap = {
+                    'prapor': window.praporData,
+                    'therapist': window.therapistData,
+                    'fence': window.fenceData,
+                    'skier': window.skierData,
+                    'peacekeeper': window.peacekeeperData,
+                    'mechanic': window.mechanicData,
+                    'ragman': window.ragmanData,
+                    'jaeger': window.jaegerData,
+                    'lightkeeper': window.lightkeeperData,
+                    '竞技场裁判': window.竞技场裁判Data,
+                    'BTR司机': window.btr司机Data
+                };
+                
+                // 合并所有商人的任务数据
+                allTasksData = [];
+                for (const traderKey in traderDataMap) {
+                    const traderData = traderDataMap[traderKey];
+                    if (traderData && traderData.data && traderData.data.tasks) {
+                        const tasks = traderData.data.tasks.map(task => ({
+                            id: task.id,
+                            name: task.name,
+                            trader: task.trader || { name: TRADER_CONFIG[traderKey]?.name || traderKey },
+                            taskRequirements: (task.taskRequirements || []).map(req => {
+                                // 处理taskRequirements
+                                if (req.task && req.task.id) {
+                                    // 查找完整的前置任务信息
+                                    const prerequisiteTask = findTaskByIdInMap(req.task.id, traderDataMap);
+                                    return {
+                                        task: {
+                                            id: prerequisiteTask ? prerequisiteTask.id : req.task.id,
+                                            name: prerequisiteTask ? prerequisiteTask.name : req.task.name || '未知任务',
+                                            trader: prerequisiteTask ? prerequisiteTask.trader : req.task.trader
+                                        }
+                                    };
+                                }
+                                return req;
+                            })
+                        }));
+                        allTasksData.push(...tasks);
+                    }
+                }
+                
+                // 创建任务ID到任务数据的映射
+                allTasksData.forEach(task => {
+                    taskDataMap[task.id] = task;
+                });
+
+                updateTaskList();
+                updateStatus('任务数据加载完成');
+            } catch (error) {
+                console.error('加载任务数据失败:', error);
+                updateStatus('加载失败: ' + error.message);
+            }
+        }
+        
+        // 根据任务ID查找任务
+        function findTaskByIdInMap(taskId, traderDataMap) {
+            for (const traderKey in traderDataMap) {
+                const traderData = traderDataMap[traderKey];
+                if (traderData && traderData.data && traderData.data.tasks) {
+                    const task = traderData.data.tasks.find(t => t.id === taskId);
+                    if (task) {
+                        return task;
+                    }
+                }
+            }
+            return null;
+        }
+
+        // 更新任务列表
+        function updateTaskList() {
+            const traderEnglishName = TRADER_CONFIG[currentTrader]?.name || currentTrader;
+            const traderTasks = allTasksData.filter(task => task.trader.name === traderEnglishName);
+            const taskList = document.getElementById('task-list');
+
+            if (traderTasks.length === 0) {
+                taskList.innerHTML = '<div class="loading">该商人暂无任务</div>';
+                return;
+            }
+
+            taskList.innerHTML = traderTasks.map(task => {
+                const pos = positionData[task.id] || { gridPosition: { x: 0, y: 0 }, types: [] };
+                return `
+                    <div class="task-item" data-task-id="${task.id}">
+                        <div class="task-item-name">${task.name}</div>
+                        <div class="task-item-id">${task.id}</div>
+                        <div class="task-item-position">位置: (${pos.gridPosition.x}, ${pos.gridPosition.y})</div>
+                    </div>
+                `;
+            }).join('');
+
+            // 添加点击事件
+            taskList.querySelectorAll('.task-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const taskId = this.getAttribute('data-task-id');
+                    selectTask(taskId);
+                });
+            });
+        }
+
+        // 选择任务
+        function selectTask(taskId) {
+            currentSelectedNode = taskId;
+            
+            // 更新列表选中状态
+            document.querySelectorAll('.task-item').forEach(item => {
+                item.classList.toggle('selected', item.getAttribute('data-task-id') === taskId);
+            });
+
+            // 更新类型复选框
+            const pos = positionData[taskId] || { types: [] };
+            document.getElementById('type-safe').checked = pos.types.includes('safe');
+            document.getElementById('type-fairy').checked = pos.types.includes('fairy');
+
+            // 更新图形选中状态
+            d3.selectAll('.node').classed('selected', d => d.taskId === taskId);
+
+            // 居中显示选中的节点
+            const node = d3.selectAll('.node').filter(d => d.taskId === taskId);
+            if (!node.empty()) {
+                const nodeData = node.datum();
+                const transform = d3.zoomIdentity
+                    .translate(width / 2 - nodeData.x, height / 2 - nodeData.y)
+                    .scale(1);
+                svg.transition().duration(500).call(zoom.transform, transform);
+            }
+        }
+
+        // 设置事件监听
+        function setupEventListeners() {
+            document.getElementById('trader-select').addEventListener('change', function() {
+                // 保存当前商人的缩放状态
+                if (currentTrader && currentTransform) {
+                    traderZoomStates[currentTrader] = currentTransform;
+                }
+                
+                currentTrader = this.value;
+                currentSelectedNode = null;
+                renderGraph();
+                updateTaskList();
+            });
+
+            document.getElementById('type-safe').addEventListener('change', function() {
+                updateTaskTypes();
+            });
+
+            document.getElementById('type-fairy').addEventListener('change', function() {
+                updateTaskTypes();
+            });
+
+            document.getElementById('export-btn').addEventListener('click', exportData);
+            document.getElementById('reset-btn').addEventListener('click', resetPosition);
+        }
+
+        // 更新任务类型
+        function updateTaskTypes() {
+            if (!currentSelectedNode) return;
+
+            const types = [];
+            if (document.getElementById('type-safe').checked) types.push('safe');
+            if (document.getElementById('type-fairy').checked) types.push('fairy');
+
+            if (!positionData[currentSelectedNode]) {
+                positionData[currentSelectedNode] = { gridPosition: { x: 0, y: 0 }, types: [] };
+            }
+            positionData[currentSelectedNode].types = types;
+
+            // 更新节点数据
+            const nodeData = nodes.find(n => n.taskId === currentSelectedNode);
+            if (nodeData) {
+                nodeData.types = types;
+            }
+
+            // 重新渲染节点以显示类型
+            updateNodeTypes();
+            updateStatus('类型已更新');
+        }
+
+        // 更新节点类型显示
+        function updateNodeTypes() {
+            if (!currentSelectedNode) return;
+
+            const nodeElement = d3.selectAll('.node').filter(d => d.taskId === currentSelectedNode);
+            if (nodeElement.empty()) return;
+
+            const nodeData = nodes.find(n => n.taskId === currentSelectedNode);
+            if (!nodeData) return;
+
+            // 移除旧的类型标签
+            nodeElement.selectAll('.type-label').remove();
+
+            // 更新背景色
+            nodeElement.select('rect')
+                .attr('fill', nodeData.types.length > 0 ? '#2a5c2a' : '#2a2a2a');
+
+            // 添加新的类型标签
+            let xOffset = -nodeWidth / 2 + 10;
+            if (nodeData.types.includes('safe')) {
+                nodeElement.append('rect')
+                    .attr('class', 'type-label')
+                    .attr('x', xOffset)
+                    .attr('y', nodeHeight / 2 - 20)
+                    .attr('width', 28)
+                    .attr('height', 12)
+                    .attr('rx', 2)
+                    .attr('fill', '#4CAF50');
+                nodeElement.append('text')
+                    .attr('class', 'type-label')
+                    .attr('x', xOffset + 14)
+                    .attr('y', nodeHeight / 2 - 10)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '8px')
+                    .attr('fill', '#fff')
+                    .text('3x4');
+                xOffset += 35;
+            }
+            
+            if (nodeData.types.includes('fairy')) {
+                nodeElement.append('rect')
+                    .attr('class', 'type-label')
+                    .attr('x', xOffset)
+                    .attr('y', nodeHeight / 2 - 20)
+                    .attr('width', 28)
+                    .attr('height', 12)
+                    .attr('rx', 2)
+                    .attr('fill', '#FF9800');
+                nodeElement.append('text')
+                    .attr('class', 'type-label')
+                    .attr('x', xOffset + 14)
+                    .attr('y', nodeHeight / 2 - 10)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '8px')
+                    .attr('fill', '#fff')
+                    .text('仙女');
+            }
+        }
+
+        // 重置位置
+        function resetPosition() {
+            if (!currentSelectedNode) {
+                alert('请先选择一个任务');
+                return;
+            }
+
+            if (confirm('确定要重置该任务的位置吗？')) {
+                positionData[currentSelectedNode] = {
+                    gridPosition: { x: 0, y: 0 },
+                    types: positionData[currentSelectedNode]?.types || []
+                };
+                renderGraph();
+                updateTaskList();
+                updateStatus('位置已重置');
+            }
+        }
+
+        let width, height;
+
+        // 渲染图形
+        function renderGraph() {
+            const container = document.getElementById('edit-graph');
+            width = container.clientWidth;
+            height = container.clientHeight;
+
+            d3.select('#edit-graph').selectAll('*').remove();
+
+            svg = d3.select('#edit-graph')
+                .attr('width', width)
+                .attr('height', height);
+
+            zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on('zoom', (event) => {
+                    g.attr('transform', event.transform);
+                    currentTransform = event.transform;
+                    // 保存当前缩放状态
+                    if (currentTrader) {
+                        traderZoomStates[currentTrader] = event.transform;
+                    }
+                })
+                .filter(function(event) {
+                    // 阻止在节点上的zoom行为（双击放大）
+                    return event.target === svg.node() || event.target === g.node() || 
+                           (event.target && !event.target.closest('.node'));
+                });
+
+            svg.call(zoom);
+            g = svg.append('g');
+
+            // 绘制网格
+            drawGrid();
+
+            // 获取当前商人的任务
+            const traderEnglishName = TRADER_CONFIG[currentTrader]?.name || currentTrader;
+            const traderTasks = allTasksData.filter(task => task.trader.name === traderEnglishName);
+
+            if (traderTasks.length === 0) {
+                updateStatus('该商人暂无任务');
+                return;
+            }
+
+            // 创建节点数据
+            // 节点置于网格内（网格单元格中心），而不是网格交叉点
+            const gridOffset = gridSpacing / 2; // 偏移到网格单元格中心
+            nodes = traderTasks.map((task, i) => {
+                const pos = positionData[task.id] || { gridPosition: { x: i, y: 0 }, types: [] };
+                return {
+                    taskId: task.id,
+                    name: task.name,
+                    x: 100 + pos.gridPosition.x * gridSpacing + gridOffset,
+                    y: 100 + pos.gridPosition.y * gridSpacing + gridOffset,
+                    gridX: pos.gridPosition.x,
+                    gridY: pos.gridPosition.y,
+                    types: pos.types || [],
+                    index: i,
+                    task: task
+                };
+            });
+
+            // 创建连线数据
+            links = [];
+            nodes.forEach((node, i) => {
+                const task = node.task;
+                if (task.taskRequirements && task.taskRequirements.length > 0) {
+                    task.taskRequirements.forEach(req => {
+                        const targetIndex = nodes.findIndex(n => n.taskId === req.task.id);
+                        if (targetIndex !== -1) {
+                            links.push({
+                                source: targetIndex,
+                                target: i
+                            });
+                        }
+                    });
+                }
+            });
+
+            // 如果没有前置任务，则创建默认的线性连接
+            if (links.length === 0) {
+                for (let i = 0; i < nodes.length - 1; i++) {
+                    links.push({
+                        source: i,
+                        target: i + 1
+                    });
+                }
+            }
+
+            // 渲染连线
+            linkGroup = g.append('g').attr('class', 'links');
+            renderLinks();
+
+            // 渲染节点
+            nodeGroup = g.append('g').attr('class', 'nodes');
+            renderNodes();
+
+            // 应用保存的缩放状态
+            const savedTransform = traderZoomStates[currentTrader];
+            if (savedTransform) {
+                g.attr('transform', savedTransform);
+                svg.call(zoom.transform, savedTransform);
+                currentTransform = savedTransform;
+            } else {
+                currentTransform = d3.zoomIdentity;
+            }
+
+            updateStatus(`已加载 ${nodes.length} 个任务节点, ${links.length} 条连线`);
+        }
+
+        // 渲染连线
+        function renderLinks() {
+            const link = linkGroup.selectAll('.link')
+                .data(links);
+
+            link.enter()
+                .append('path')
+                .attr('class', 'link')
+                .merge(link)
+                .attr('d', d => {
+                    const source = nodes[d.source];
+                    const target = nodes[d.target];
+                    
+                    // 使用网格式连线：先水平移动，再垂直移动，再水平移动
+                    const midX1 = source.x + (target.x - source.x) * 0.5;
+                    const midX2 = target.x - (target.x - source.x) * 0.5;
+                    
+                    return `M ${source.x} ${source.y} 
+                            H ${midX1} 
+                            V ${target.y} 
+                            H ${target.x}`;
+                });
+
+            link.exit().remove();
+        }
+
+        // 渲染节点
+        function renderNodes() {
+            const node = nodeGroup.selectAll('.node')
+                .data(nodes);
+
+            const nodeEnter = node.enter()
+                .append('g')
+                .attr('class', d => `node ${d.taskId === currentSelectedNode ? 'selected' : ''}`)
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+
+            // 添加矩形
+            nodeEnter.append('rect')
+                .attr('width', nodeWidth)
+                .attr('height', nodeHeight)
+                .attr('x', -nodeWidth / 2)
+                .attr('y', -nodeHeight / 2)
+                .attr('fill', d => d.types.length > 0 ? '#2a5c2a' : '#2a2a2a')
+                .attr('stroke', d => d.taskId === currentSelectedNode ? '#2196F3' : '#666')
+                .attr('stroke-width', d => d.taskId === currentSelectedNode ? 4 : 2);
+
+            // 添加文本
+            nodeEnter.append('text')
+                .attr('class', 'node-label')
+                .attr('y', -10)
+                .text(d => {
+                    const maxLen = 20;
+                    return d.name.length > maxLen ? d.name.substring(0, maxLen) + '...' : d.name;
+                });
+
+            nodeEnter.append('text')
+                .attr('class', 'node-id')
+                .attr('y', 10)
+                .text(d => `(${d.gridX}, ${d.gridY})`);
+
+            // 合并并更新
+            const nodeUpdate = nodeEnter.merge(node);
+
+            // 更新位置和选中状态
+            nodeUpdate
+                .attr('transform', d => `translate(${d.x},${d.y})`)
+                .classed('selected', d => d.taskId === currentSelectedNode);
+
+            // 更新矩形样式
+            nodeUpdate.select('rect')
+                .attr('fill', d => d.types.length > 0 ? '#2a5c2a' : '#2a2a2a')
+                .attr('stroke', d => d.taskId === currentSelectedNode ? '#2196F3' : '#666')
+                .attr('stroke-width', d => d.taskId === currentSelectedNode ? 4 : 2);
+
+            // 更新坐标显示
+            nodeUpdate.select('.node-id')
+                .text(d => `(${d.gridX}, ${d.gridY})`);
+
+            // 更新类型标签
+            nodeUpdate.each(function(d) {
+                const nodeElement = d3.select(this);
+                // 移除旧的类型标签
+                nodeElement.selectAll('.type-label').remove();
+                
+                let xOffset = -nodeWidth / 2 + 10;
+                
+                if (d.types.includes('safe')) {
+                    nodeElement.append('rect')
+                        .attr('class', 'type-label')
+                        .attr('x', xOffset)
+                        .attr('y', nodeHeight / 2 - 20)
+                        .attr('width', 28)
+                        .attr('height', 12)
+                        .attr('rx', 2)
+                        .attr('fill', '#4CAF50');
+                    nodeElement.append('text')
+                        .attr('class', 'type-label')
+                        .attr('x', xOffset + 14)
+                        .attr('y', nodeHeight / 2 - 10)
+                        .attr('text-anchor', 'middle')
+                        .attr('font-size', '8px')
+                        .attr('fill', '#fff')
+                        .text('3x4');
+                    xOffset += 35;
+                }
+                
+                if (d.types.includes('fairy')) {
+                    nodeElement.append('rect')
+                        .attr('class', 'type-label')
+                        .attr('x', xOffset)
+                        .attr('y', nodeHeight / 2 - 20)
+                        .attr('width', 28)
+                        .attr('height', 12)
+                        .attr('rx', 2)
+                        .attr('fill', '#FF9800');
+                    nodeElement.append('text')
+                        .attr('class', 'type-label')
+                        .attr('x', xOffset + 14)
+                        .attr('y', nodeHeight / 2 - 10)
+                        .attr('text-anchor', 'middle')
+                        .attr('font-size', '8px')
+                        .attr('fill', '#fff')
+                        .text('仙女');
+                }
+            });
+
+            // 添加拖拽和点击事件
+            let clickTimer = null;
+            nodeUpdate
+                .on('mousedown', function(event) {
+                    // 阻止zoom行为在节点上触发
+                    event.stopPropagation();
+                    // 清除之前的点击定时器
+                    if (clickTimer) {
+                        clearTimeout(clickTimer);
+                        clickTimer = null;
+                    }
+                })
+                .call(d3.drag()
+                    .on('start', dragStarted)
+                    .on('drag', dragged)
+                    .on('end', dragEnded))
+                .on('click', function(event, d) {
+                    event.stopPropagation();
+                    // 延迟执行，确保拖拽事件已完成
+                    clickTimer = setTimeout(() => {
+                        if (!isDragging) {
+                            selectTask(d.taskId);
+                        }
+                        clickTimer = null;
+                    }, 50);
+                });
+
+            node.exit().remove();
+        }
+
+        // 绘制网格
+        function drawGrid() {
+            const gridGroup = g.append('g').attr('class', 'grid');
+            
+            // 网格范围：X: 0~20, Y: -10~10
+            const minX = 0;
+            const maxX = 20;
+            const minY = -10;
+            const maxY = 10;
+            
+            const startX = 100 + minX * gridSpacing;
+            const endX = 100 + maxX * gridSpacing;
+            const startY = 100 + minY * gridSpacing;
+            const endY = 100 + maxY * gridSpacing;
+            
+            // 绘制竖线（X方向）
+            for (let gridX = minX; gridX <= maxX; gridX++) {
+                const x = 100 + gridX * gridSpacing;
+                gridGroup.append('line')
+                    .attr('class', 'grid-line')
+                    .attr('x1', x)
+                    .attr('y1', startY)
+                    .attr('x2', x)
+                    .attr('y2', endY);
+            }
+            
+            // 绘制横线（Y方向）
+            for (let gridY = minY; gridY <= maxY; gridY++) {
+                const y = 100 + gridY * gridSpacing;
+                gridGroup.append('line')
+                    .attr('class', 'grid-line')
+                    .attr('x1', startX)
+                    .attr('y1', y)
+                    .attr('x2', endX)
+                    .attr('y2', y);
+            }
+        }
+
+        // 拖拽开始
+        function dragStarted(event, d) {
+            isDragging = true;
+            event.sourceEvent.stopPropagation(); // 阻止事件冒泡
+            d3.select(this).raise();
+        }
+
+        // 拖拽中
+        function dragged(event, d) {
+            event.sourceEvent.stopPropagation(); // 阻止事件冒泡
+            
+            // 使用d3.pointer获取在g坐标系中的正确位置
+            const [pointerX, pointerY] = d3.pointer(event, g.node());
+            
+            // 对齐到网格（节点置于网格单元格中心）
+            const gridOffset = gridSpacing / 2; // 偏移到网格单元格中心
+            const gridX = Math.round((pointerX - 100 - gridOffset) / gridSpacing);
+            const gridY = Math.round((pointerY - 100 - gridOffset) / gridSpacing);
+            
+            d.x = 100 + gridX * gridSpacing + gridOffset;
+            d.y = 100 + gridY * gridSpacing + gridOffset;
+            d.gridX = gridX;
+            d.gridY = gridY;
+
+            // 更新节点位置
+            d3.select(this).attr('transform', `translate(${d.x},${d.y})`);
+            
+            // 更新位置数据
+            if (!positionData[d.taskId]) {
+                positionData[d.taskId] = { gridPosition: { x: 0, y: 0 }, types: [] };
+            }
+            positionData[d.taskId].gridPosition = { x: gridX, y: gridY };
+
+            // 更新坐标显示
+            d3.select(this).select('.node-id').text(`(${gridX}, ${gridY})`);
+
+            // 更新连线
+            renderLinks();
+        }
+
+        // 拖拽结束
+        function dragEnded(event, d) {
+            event.sourceEvent.stopPropagation(); // 阻止事件冒泡
+            // 延迟重置isDragging，确保点击事件能正确判断
+            setTimeout(() => {
+                isDragging = false;
+            }, 10);
+            updateTaskList();
+            updateStatus(`任务位置已更新: (${d.gridX}, ${d.gridY})`);
+        }
+
+        // 更新状态
+        function updateStatus(text) {
+            document.getElementById('status-text').textContent = text;
+        }
+
+        // 导出数据
+        function exportData() {
+            // 生成导出内容
+            let content = '// position_data.js - 任务位置和类型数据\n';
+            content += 'const POSITION_DATA = {\n';
+
+            // 按任务ID排序
+            const sortedTaskIds = Object.keys(positionData).sort();
+
+            sortedTaskIds.forEach((taskId, index) => {
+                const pos = positionData[taskId];
+                const task = taskDataMap[taskId];
+                const taskName = task ? task.name : '未知任务';
+                
+                content += `  "${taskId}": { // ${taskName}\n`;
+                content += `    "gridPosition": {\n`;
+                content += `      "x": ${pos.gridPosition.x},\n`;
+                content += `      "y": ${pos.gridPosition.y}\n`;
+                content += `    },\n`;
+                content += `    "types": [\n`;
+                
+                if (pos.types && pos.types.length > 0) {
+                    pos.types.forEach((type, i) => {
+                        content += `      "${type}"`;
+                        if (i < pos.types.length - 1) content += ',';
+                        content += '\n';
+                    });
+                }
+                
+                content += `    ]\n`;
+                content += `  }`;
+                if (index < sortedTaskIds.length - 1) content += ',';
+                content += '\n';
+            });
+
+            content += '};\n';
+
+            // 显示导出对话框
+            document.getElementById('export-content').value = content;
+            document.getElementById('export-dialog').classList.add('active');
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard() {
+            const textarea = document.getElementById('export-content');
+            textarea.select();
+            document.execCommand('copy');
+            alert('已复制到剪贴板！');
+        }
+
+        // 下载文件
+        function downloadFile() {
+            const content = document.getElementById('export-content').value;
+            const blob = new Blob([content], { type: 'text/javascript' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'position_data.js';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // 关闭导出对话框
+        function closeExportDialog() {
+            document.getElementById('export-dialog').classList.remove('active');
+        }
+
+        // 窗口大小改变时重新渲染
+        window.addEventListener('resize', () => {
+            if (svg) {
+                renderGraph();
+            }
+        });
+
+        // 初始化
+        init();
+    </script>
+</body>
+</html>
+

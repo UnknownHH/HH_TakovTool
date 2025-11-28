@@ -1,0 +1,526 @@
+/* ===== 任务界面样式 ===== */
+#task-graph {
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-color);
+    background-image: url('../img/bg-eod.1BFlYUrN.webp');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: block;
+}
+
+/* 任务节点样式 */
+.task-node {
+    cursor: pointer;
+    transition: all 0.3s;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+.task-node text {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    pointer-events: none;
+}
+
+.task-node.completed rect {
+    stroke: #4CAF50 !important;
+}
+
+.task-node:hover rect {
+    filter: drop-shadow(0 0 8px rgba(222, 233, 233, 0.6));
+}
+
+.task-node.completed:hover rect {
+    filter: drop-shadow(0 0 8px rgba(76, 175, 80, 0.8));
+}
+
+.task-node.selected rect {
+    stroke: #dee9e9 !important;
+    filter: drop-shadow(0 0 8px rgba(222, 233, 233, 0.6));
+}
+
+/* 进度控制 */
+.progress-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.progress-info {
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+/* ===== 任务提示框样式 ===== */
+.task-tooltip {
+    position: fixed;
+    left: 20px;
+    top: 150px;
+    bottom: 135px;
+    background-color: var(--dock-bg);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+    z-index: 1001;
+    width: 400px;
+    display: none;
+    line-height: 1.4;
+    overflow: hidden;
+    flex-direction: column;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.task-tooltip::-webkit-scrollbar {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .task-tooltip {
+        left: 10px;
+        right: 10px;
+        max-width: none;
+        top: 10px;
+        bottom: 10px;
+        transform: none;
+        width: auto;
+    }
+}
+
+/* 任务提示框头部 */
+.task-tooltip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 15px 10px;
+    border-bottom: 1px solid #444;
+    background-color: rgba(0, 0, 0, 0.3);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+.task-tooltip-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #eee;
+    margin: 0;
+    flex: 1;
+    padding-right: 10px;
+}
+
+.task-tooltip-close {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    transition: all 0.3s;
+}
+
+.task-tooltip-close:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 任务提示框内容 */
+.task-tooltip-info {
+    padding: 15px;
+    flex: 1;
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.task-tooltip-info::-webkit-scrollbar {
+    display: none;
+}
+
+.task-image {
+    width: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.task-info-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0 15px;
+    font-size: 16px;
+}
+
+/* 任务内容区块 */
+.task-objectives,
+.task-rewards,
+.task-guide {
+    margin-bottom: 15px;
+}
+
+.task-section-title {
+    margin-bottom: 8px;
+    font-size: 18px;
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.task-objective,
+.task-reward,
+.task-guide {
+    margin-bottom: 5px;
+    font-size: 16px;
+    line-height: 1.3;
+    padding-left: 5px;
+}
+
+/* 任务操作区域 */
+.task-actions {
+    padding: 15px;
+    border-top: 1px solid #444;
+    background-color: rgba(0, 0, 0, 0.3);
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+/* 状态切换按钮 */
+.status-toggle-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+    transition: all 0.3s;
+    min-width: 140px;
+}
+
+.status-toggle-btn.completed {
+    background-color: #f44336;
+    color: white;
+}
+
+.status-toggle-btn.incomplete {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.status-toggle-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* 前置任务样式 */
+.task-prerequisites {
+    margin-bottom: 15px;
+}
+
+.task-prerequisites-header {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.3s;
+}
+
+.task-prerequisites-header:hover {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+.task-prerequisites-list {
+    margin-top: 8px;
+    padding-left: 15px;
+}
+
+.task-prerequisite {
+    margin-bottom: 6px;
+    padding: 6px 10px;
+    background-color: rgba(175, 76, 76, 0.1);
+    border-left: 3px solid #AF4C4C;
+    border-radius: 3px;
+    font-size: 14px;
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.task-prerequisite:hover {
+    background-color: rgba(175, 76, 76, 0.2);
+}
+
+.prerequisite-trader-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.prerequisite-text {
+    flex: 1;
+}
+
+/* 前置任务折叠栏标题颜色 */
+.task-prerequisites-header.prerequisites-completed {
+    color: #4CAF50 !important;
+}
+
+.task-prerequisites-header.prerequisites-incomplete {
+    color: #AF4C4C !important;
+}
+
+/* 前置任务完成状态样式 */
+.task-prerequisite.prerequisite-completed {
+    background-color: rgba(76, 175, 80, 0.2) !important;
+    border-left: 3px solid #4CAF50 !important;
+    color: #e8f5e9;
+}
+
+.task-prerequisite.prerequisite-incomplete {
+    background-color: rgba(175, 76, 76, 0.2) !important;
+    border-left: 3px solid #AF4C4C !important;
+    color: #ffebee;
+}
+
+.task-prerequisite.prerequisite-completed:hover {
+    background-color: rgba(76, 175, 80, 0.3) !important;
+}
+
+.task-prerequisite.prerequisite-incomplete:hover {
+    background-color: rgba(175, 76, 76, 0.3) !important;
+}
+
+/* 禁用按钮样式 */
+.status-toggle-btn.disabled {
+    background-color: #666 !important;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.status-toggle-btn.disabled:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    opacity: 0.6;
+}
+
+/* ===== 任务目标提示框样式 ===== */
+.objective-tooltip {
+    position: fixed;
+    background-color: var(--dock-bg);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    max-width: 350px;
+    display: none;
+    padding: 12px;
+    font-size: 16px;
+    line-height: 1.4;
+    color: var(--text-color);
+    border: 1px solid #444;
+    pointer-events: none;
+}
+
+.objective-tooltip-header {
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #eee;
+    border-bottom: 1px solid #555;
+    padding-bottom: 4px;
+}
+
+.objective-tooltip-content {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.objective-tooltip-item {
+    margin-bottom: 4px;
+}
+
+.objective-tooltip-item:last-child {
+    margin-bottom: 0;
+}
+
+/* ===== 奖励物品样式 ===== */
+.reward-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 8px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    line-height: 1.4;
+}
+
+.reward-image {
+    width: 50px;
+    height: 50px;
+    margin-right: 10px;
+    object-fit: contain;
+}
+
+.reward-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.reward-name {
+    font-size: 16px;
+    color: #eee;
+    margin-bottom: 2px;
+}
+
+.reward-quantity {
+    font-weight: bold;
+    color: #4CAF50;
+    font-size: 14px;
+}
+
+.reward-text {
+    font-size: 16px;
+    padding: 5px 0;
+}
+
+/* 特殊解锁类型颜色 */
+.craft-unlock {
+    color: #FF9800;
+}
+
+.offer-unlock {
+    color: #2196F3;
+}
+
+.trader-unlock {
+    color: #9C27B0;
+}
+
+/* 经验奖励特殊样式 */
+.experience-reward {
+    background-color: rgba(76, 175, 80, 0.2);
+    border-left: 3px solid #4CAF50;
+}
+
+/* 声望奖励特殊样式 */
+.standing-reward {
+    background-color: rgba(33, 150, 243, 0.2);
+    border-left: 3px solid #2196F3;
+}
+
+/* ===== 任务类型标签样式 ===== */
+.task-type-label {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 8px;
+    font-weight: bold;
+    color: white;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.task-type-label.fairy {
+    fill: #ff69b4;
+}
+
+.task-type-label.safe {
+    fill: #1e90ff;
+}
+
+/* ===== 统一加载动画样式 ===== */
+.loading-animation {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #ccc;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(76, 175, 80, 0.3);
+    border-top: 4px solid #4CAF50;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+.loading-text {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.loading-subtext {
+    font-size: 12px;
+    color: #999;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 小尺寸加载动画 */
+.loading-small {
+    padding-top: 150px;
+}
+
+.loading-small .loading-spinner {
+    width: 24px;
+    height: 24px;
+    border-width: 3px;
+}
+
+.loading-small .loading-text {
+    font-size: 14px;
+}
+
+.loading-small .loading-subtext {
+    font-size: 11px;
+}
+
+/* 内联加载动画 */
+.loading-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+}
+
+.loading-inline .loading-spinner {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+    margin-bottom: 0;
+}
+
+.loading-inline .loading-text {
+    font-size: 14px;
+    margin-bottom: 0;
+}

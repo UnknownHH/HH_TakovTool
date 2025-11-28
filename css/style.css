@@ -1,0 +1,298 @@
+/* ===== CSS 变量定义 ===== */
+:root {
+    --bg-color: #000000;
+    --content-bg: #232323;
+    --text-color: #999;
+    --accent-color: #4CAF50;
+    --hover-color: #333;
+    --dock-bg: rgba(35, 35, 35, 0.9);
+    --shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+    --border-radius: 5px;
+}
+
+/* ===== 重置和基础样式 ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    padding-top: 0;
+    padding-bottom: 120px;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+}
+
+/* ===== 通用组件样式 ===== */
+
+/* 导航栏和Dock栏通用样式 */
+.top-navbar,
+.bottom-dock {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 10px 20px;
+    box-shadow: var(--shadow);
+    z-index: 1000;
+    max-width: 95%;
+    overflow-x: auto;
+}
+
+.top-navbar {
+    top: 20px;
+}
+
+.bottom-dock {
+    bottom: 10px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .top-navbar,
+    .bottom-dock {
+        left: 10px;
+        transform: none;
+        right: 10px;
+        max-width: calc(100% - 20px);
+        padding: 8px 15px;
+        border-radius: 5px;
+    }
+}
+
+/* 容器和项目通用样式 */
+.nav-container,
+.dock-container {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.nav-item,
+.dock-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.3s;
+    min-width: 80px;
+    position: relative;
+}
+
+.nav-item:hover,
+.dock-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.nav-item.active,
+.dock-item.active {
+    background-color: rgba(76, 175, 80, 0.2);
+}
+
+/* 移动端项目尺寸调整 */
+@media (max-width: 768px) {
+    .nav-item,
+    .dock-item {
+        min-width: 70px;
+        padding: 8px;
+    }
+}
+
+/* 图标样式 */
+.nav-icon,
+.dock-icon {
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 5px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+.nav-icon {
+    width: 40px;
+    height: 40px;
+    background-color: var(--content-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dock-icon {
+    width: 60px;
+    height: 60px;
+}
+
+/* 移动端图标尺寸调整 */
+@media (max-width: 768px) {
+    .nav-icon {
+        width: 35px;
+        height: 35px;
+    }
+    .dock-icon {
+        width: 40px;
+        height: 40px;
+    }
+}
+
+.nav-icon svg {
+    width: 24px;
+    height: 24px;
+    fill: var(--text-color);
+}
+
+.nav-item.active .nav-icon svg {
+    fill: var(--accent-color);
+}
+
+.dock-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 名称标签 */
+.nav-name,
+.dock-name {
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .nav-name,
+    .dock-name {
+        font-size: 11px;
+    }
+}
+
+/* ===== 内容区域样式 ===== */
+.content {
+    display: none;
+    padding: 10px;
+    min-height: calc(100vh - 180px);
+    height: 100vh;
+    overflow: hidden;
+}
+
+.content.active {
+    display: block;
+}
+
+/* 主视图区域 */
+.main-view {
+    height: calc(100vh - 20px);
+    background-color: var(--content-bg);
+    border-radius: var(--border-radius);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+/* ===== 浮动控制栏样式 ===== */
+.floating-controls {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 1000;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+    pointer-events: none;
+}
+
+.floating-controls > * {
+    pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+    .floating-controls {
+        top: 110px;
+        right: 0;
+    }
+}
+
+/* 控制栏通用样式 */
+.map-controls,
+.task-controls {
+    backdrop-filter: blur(10px);
+    border-radius: var(--border-radius);
+    padding: 10px 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+/* ===== 工具提示样式 ===== */
+.trader-tooltip {
+    position: absolute;
+    background-color: var(--content-bg);
+    padding: 10px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    z-index: 1001;
+    max-width: 300px;
+    display: none;
+}
+
+/* ===== 滚动条样式 ===== */
+.bottom-dock::-webkit-scrollbar {
+    height: 3px;
+}
+
+.bottom-dock::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.bottom-dock::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+.bottom-dock::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* 加载提示居中样式 */
+.loading-detail {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    font-size: 18px;
+    color: #ccc;
+}
+
+/* 通用按钮样式 */
+.progress-btn, .hideout-btn {
+    padding: 8px 15px;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.3s;
+}
+
+.progress-btn:hover, .hideout-btn:hover {
+    background-color: #45a049;
+}
+
+.progress-btn {
+    background-color: #d32f2f;
+}
+
+.progress-btn:hover {
+    background-color: #b71c1c;
+}
